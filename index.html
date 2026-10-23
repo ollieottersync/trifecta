@@ -270,8 +270,8 @@ function revBadge(r) {
   if (r.rg === null || r.rg === undefined) return '';
   const pct = (r.rgr === null || r.rgr === undefined) ? '' : (r.rgr > 0 ? '+' : '') + r.rgr.toFixed(1) + '%';
   const tip = 'Point-in-time TTM revenue growth at the signal date: ' + (pct || 'n/a');
-  if (r.rg) return '<div><span class="revchip up" title="' + tip + '">REV ↑</span>' + (pct ? '<span class="revsub">' + pct + ' rev</span>' : '') + '</div>';
-  return '<div><span class="revchip dn" title="' + tip + '">REV ↓</span>' + (pct ? '<span class="revsub">' + pct + ' rev</span>' : '') + '</div>';
+  if (r.rg) return '<div><span class="revchip up" title="' + tip + '">REVENUE ↑</span>' + (pct ? '<span class="revsub">' + pct + ' rev</span>' : '') + '</div>';
+  return '<div><span class="revchip dn" title="' + tip + '">REVENUE ↓</span>' + (pct ? '<span class="revsub">' + pct + ' rev</span>' : '') + '</div>';
 }
 function catCell(r) {
   return '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span><div class="pathlbl">' + esc(r.p) + '</div>' + revBadge(r);
@@ -434,7 +434,7 @@ fetch('data.json').then(r => r.json()).then(d => {
     '(TTM = prior fiscal year + current YTD − prior-year same-period YTD); shares outstanding from the closest filing on or before the signal date. ' +
     'The signal log is append-only — a stock admitted at its trigger date is never removed, even if it later falls below the size floors. ' +
     'Category: <strong>Quality</strong> = admitted as Profitable or FCF-positive; <strong>Junk</strong> = admitted via the $1B+ growth path (neither profitable nor FCF-positive). ' +
-    'The <strong>REV ↑ / REV ↓</strong> badge shows point-in-time TTM revenue growth at the signal date (SEC filings available by then): green when revenue was still growing, red when it was shrinking, absent when it cannot be established point-in-time. Backfilled tests found revenue growth separates short-horizon (30–60 day) bounce quality — most strongly inside deep-flush names — but is not a 90-day separator, so it is shown as information, not used as an admission gate. ' +
+    'The <strong>REVENUE ↑ / REVENUE ↓</strong> badge shows point-in-time TTM revenue growth at the signal date (SEC filings available by then): green when revenue was still growing, red when it was shrinking, absent when it cannot be established point-in-time. Backfilled tests found revenue growth separates short-horizon (30–60 day) bounce quality — most strongly inside deep-flush names — but is not a 90-day separator, so it is shown as information, not used as an admission gate. ' +
     'Universe is US exchange-listed stocks only (NASDAQ / NYSE / NYSE American / NYSE Arca / Cboe) — no OTC. ' +
     'Survivorship caveat: the universe is built from current listings, so companies delisted before the backfill do not appear. ' +
     'The +30/+60/+90-day columns count only signals whose full horizon had elapsed by ' + d.asOf + '; younger signals show —. ' +
