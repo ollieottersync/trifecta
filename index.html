@@ -70,6 +70,7 @@
   details.month summary .cnt { color:var(--dim); font-weight:400; font-size:.85rem; margin-left:8px; }
   .await { border-color:var(--acc); }
   .await h2 { color:var(--acc); }
+  .tap-hint { font-size:.78rem; color:var(--dim); margin-top:6px; }
   .controls { display:flex; gap:10px; flex-wrap:wrap; margin:14px 0 4px; }
   .controls input, .controls select { background:var(--card); border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:9px 12px; font-size:.95rem; }
   .controls input { flex:1; min-width:200px; }
@@ -314,7 +315,8 @@ function renderCurrent() {
     html += '<div class="card await"><h2 class="about-h" style="margin:0" onclick="toggleAwait()">⏳ Awaiting confirmation (' + awaiting.length + ') <span id="await-chev" class="about-chev' + (AWAIT_OPEN ? ' open' : '') + '">▸</span></h2>' +
       '<div id="await-body" style="display:' + (AWAIT_OPEN ? '' : 'none') + '">' +
       '<p style="margin-top:10px">Early signals from the last 15 days still inside their MACD confirmation window.</p>' +
-      currentTable(awaiting) + '</div></div>';
+      currentTable(awaiting) + '</div>' +
+      '<div id="await-hint" class="tap-hint" style="display:' + (AWAIT_OPEN ? 'none' : '') + '">Tap to expand</div></div>';
   }
   const curMonth = DATA.asOf.slice(0,7);
   const curSigs = sigs.filter(r => r.d.slice(0,7) === curMonth);
@@ -484,6 +486,8 @@ function toggleAwait() {
   body.style.display = AWAIT_OPEN ? '' : 'none';
   const ch = document.getElementById('await-chev');
   if (ch) ch.classList.toggle('open', AWAIT_OPEN);
+  const hint = document.getElementById('await-hint');
+  if (hint) hint.style.display = AWAIT_OPEN ? 'none' : '';
   try { localStorage.setItem('trifectaAwaitOpen', AWAIT_OPEN ? '1' : '0'); } catch (e) {}
 }
 try { if (localStorage.getItem('trifectaAboutOpen') === '1') setAbout(true); } catch (e) {}
