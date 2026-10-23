@@ -152,7 +152,7 @@
       <span class="lbl">Chart:</span>
       <span class="seg seg-chart">
         <button data-range="daily" onclick="setChartRange('daily')" title="Ticker links open the chart on Yahoo Finance">Daily</button>
-        <button data-range="1y" onclick="setChartRange('1y')" title="Ticker links open the chart on TradingView, 1-year view">1 Year</button>
+        <button data-range="1y" onclick="setChartRange('1y')" title="Ticker links open the chart on Finviz — trailing-year view">1 Year</button>
       </span>
       <span class="shown" id="curCount"></span>
       <span style="flex:1"></span>
@@ -177,7 +177,7 @@
       <span class="lbl">Chart:</span>
       <span class="seg seg-chart">
         <button data-range="daily" onclick="setChartRange('daily')" title="Ticker links open the chart on Yahoo Finance">Daily</button>
-        <button data-range="1y" onclick="setChartRange('1y')" title="Ticker links open the chart on TradingView, 1-year view">1 Year</button>
+        <button data-range="1y" onclick="setChartRange('1y')" title="Ticker links open the chart on Finviz — trailing-year view">1 Year</button>
       </span>
     </div>
     <div id="record-stats"></div>
@@ -215,14 +215,14 @@ const BUCKETS = ['Large','Mid','Small'];
 const PATHS = ['Profitable','FCF-positive','Growth $1B+'];
 let DATA = null;
 let MODE = 'all'; // 'all' = Quality + Junk, 'quality' = Quality only
-let CHART_RANGE = 'daily'; // 'daily' = Yahoo Finance chart links, '1y' = TradingView 1-year chart links
+let CHART_RANGE = 'daily'; // 'daily' = Yahoo Finance chart links, '1y' = Finviz trailing-year chart links
 try { if (localStorage.getItem('trifectaChartRange') === '1y') CHART_RANGE = '1y'; } catch (e) {}
 function chartUrl(sym) {
-  return CHART_RANGE === '1y' ? 'https://www.tradingview.com/symbols/' + sym + '/'
+  return CHART_RANGE === '1y' ? 'https://finviz.com/quote.ashx?t=' + sym
                               : 'https://finance.yahoo.com/quote/' + sym + '/chart';
 }
 function chartTitle(t) {
-  return CHART_RANGE === '1y' ? 'Open the ' + t + ' 1-year chart on TradingView'
+  return CHART_RANGE === '1y' ? 'Open the ' + t + ' chart on Finviz (trailing-year view)'
                               : 'Open the ' + t + ' chart on Yahoo Finance';
 }
 function setChartRange(v) {
