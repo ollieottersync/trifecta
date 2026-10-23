@@ -25,6 +25,13 @@
   .tab { background:none; border:none; color:var(--mut); font-size:1.05rem; font-weight:600; padding:10px 18px; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1px; }
   .tab.active { color:var(--txt); border-bottom-color:var(--acc); }
   .tab:hover { color:var(--txt); }
+  .toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:16px 0 4px; }
+  .toolbar .lbl { color:var(--mut); font-size:.9rem; }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+  .seg button { background:var(--card); color:var(--mut); border:none; font-size:.92rem; font-weight:600; padding:8px 16px; cursor:pointer; }
+  .seg button + button { border-left:1px solid var(--line); }
+  .seg button.active { background:var(--acc); color:#0d1117; }
+  .seg button:not(.active):hover { color:var(--txt); }
   table { width:100%; border-collapse:collapse; font-size:.92rem; }
   th { text-align:left; color:var(--mut); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--line); }
   td { padding:7px 10px; border-bottom:1px solid #21262d; vertical-align:middle; }
@@ -37,6 +44,10 @@
   .badge { display:inline-block; font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:20px; letter-spacing:.3px; }
   .badge.conf { background:rgba(63,185,80,.15); color:var(--grn); border:1px solid rgba(63,185,80,.5); }
   .badge.early { background:rgba(240,185,11,.12); color:var(--acc); border:1px solid rgba(240,185,11,.5); }
+  .qchip { display:inline-block; font-size:.7rem; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:.6px; }
+  .qchip.quality { background:rgba(63,185,80,.16); color:var(--grn); border:1px solid rgba(63,185,80,.55); }
+  .qchip.junk { background:rgba(240,185,11,.14); color:var(--acc); border:1px solid rgba(240,185,11,.55); }
+  .pathlbl { color:var(--dim); font-size:.76rem; margin-top:2px; }
   .chip { display:inline-block; font-size:.72rem; padding:2px 8px; border-radius:6px; background:#0d1117; border:1px solid var(--line); color:var(--mut); }
   .group-h { display:flex; align-items:baseline; gap:10px; margin:26px 0 4px; }
   .group-h h3 { margin:0; font-size:1.05rem; }
@@ -70,10 +81,12 @@
     out of oversold (%K and %D both under 20), and the <strong>MACD (12,26,9)</strong> histogram bottoms and rises
     two straight days. It becomes <strong>Confirmed</strong> if the MACD line crosses above its signal line within
     <strong>15 calendar days</strong>, with RSI still under 55.</p>
-    <p style="margin-bottom:0">A quality filter keeps junk out: US <strong>exchange-listed</strong> stocks only (no OTC);
-    profitable <em>or</em> free-cash-flow positive names need market cap ≥ <strong>$500M</strong>, names that are neither need
-    ≥ <strong>$1B</strong>; price ≥ $5 and 20-day average volume ≥ 500k shares. Market cap and fundamentals are judged on the
-    SEC filings available <strong>at the signal date</strong> — never on today's numbers.</p>
+    <p style="margin-bottom:0">Every admitted stock carries a category. <strong>Quality</strong> names were profitable
+    <em>or</em> free-cash-flow positive at the signal date (market cap ≥ <strong>$500M</strong>). <strong>Junk</strong> names were
+    neither — admitted only on size (market cap ≥ <strong>$1B</strong>). US <strong>exchange-listed</strong> stocks only (no OTC);
+    price ≥ $5 and 20-day average volume ≥ 500k shares. Market cap and fundamentals are judged on the SEC filings
+    available <strong>at the signal date</strong> — never on today's numbers. Use the category toggle on either tab to
+    see what the junk filter is worth: every figure on the page recomputes for the visible set.</p>
   </div>
 
   <div class="stats-strip" id="headline"></div>
@@ -83,9 +96,26 @@
     <button class="tab" id="tab-record" onclick="showTab('record')">Track Record</button>
   </div>
 
-  <div id="view-current"><div class="loading">Loading signals…</div></div>
+  <div id="view-current">
+    <div class="toolbar">
+      <span class="lbl">Category:</span>
+      <span class="seg" id="seg-current">
+        <button data-mode="all" class="active" onclick="setMode('all')">Quality + Junk</button>
+        <button data-mode="quality" onclick="setMode('quality')">Quality only</button>
+      </span>
+      <span class="shown" id="curCount"></span>
+    </div>
+    <div id="current-body"><div class="loading">Loading signals…</div></div>
+  </div>
 
   <div id="view-record" style="display:none">
+    <div class="toolbar">
+      <span class="lbl">Category:</span>
+      <span class="seg" id="seg-record">
+        <button data-mode="all" class="active" onclick="setMode('all')">Quality + Junk</button>
+        <button data-mode="quality" onclick="setMode('quality')">Quality only</button>
+      </span>
+    </div>
     <div id="record-stats"></div>
     <div class="controls">
       <input type="text" id="q" placeholder="Search ticker or company name…" oninput="applyFilter()">
@@ -106,13 +136,16 @@
 <script>
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MON3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const BUCKETS = ['Large','Mid','Small'];
+const PATHS = ['Profitable','FCF-positive','Growth $1B+'];
 let DATA = null;
+let MODE = 'all'; // 'all' = Quality + Junk, 'quality' = Quality only
 
+function r1(v) { return Math.round(v * 10) / 10; }
 function fmtPct(v) {
   if (v === null || v === undefined) return '<span class="flat">—</span>';
   const cls = v > 0 ? 'pos' : (v < 0 ? 'neg' : 'flat');
-  const s = (v > 0 ? '+' : '') + v.toFixed(1) + '%';
-  return '<span class="' + cls + '">' + s + '</span>';
+  return '<span class="' + cls + '">' + (v > 0 ? '+' : '') + v.toFixed(1) + '%</span>';
 }
 function fmtPlain(v) { return (v === null || v === undefined) ? '—' : v.toFixed(1) + '%'; }
 function parseD(s) { const p = s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
@@ -121,22 +154,63 @@ function mondayOf(s) { const d = parseD(s); const dow = (d.getDay() + 6) % 7; d.
 function isoDay(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
+function visibleSignals() {
+  if (!DATA) return [];
+  return MODE === 'quality' ? DATA.signals.filter(r => r.cat === 'Quality') : DATA.signals.slice();
+}
+function pctStats(vals) {
+  const vs = vals.filter(v => v !== null && v !== undefined);
+  if (!vs.length) return { n:0, pos:0, pctPos:null, mean:null, median:null };
+  const sorted = vs.slice().sort((a,b) => a-b);
+  const pos = vs.filter(v => v > 0).length;
+  const mean = vs.reduce((a,b) => a+b, 0) / vs.length;
+  const med = sorted.length % 2 ? sorted[(sorted.length-1)/2] : (sorted[sorted.length/2-1] + sorted[sorted.length/2]) / 2;
+  return { n: vs.length, pos: pos, pctPos: r1(pos / vs.length * 100), mean: r1(mean), median: r1(med) };
+}
+function groupBlock(recs) {
+  const blk = { n: recs.length, pctUpSince: pctStats(recs.map(r => r.st)).pctPos };
+  [30,60,90].forEach(h => { blk['h'+h] = pctStats(recs.map(r => r['r'+h])); });
+  return blk;
+}
+function computeStats(list) {
+  const conf = list.filter(r => r.cd), unc = list.filter(r => !r.cd);
+  const t10e = list.filter(r => r.t10 !== null && r.t10 !== undefined);
+  const t10hits = t10e.filter(r => r.t10).length;
+  const stAll = pctStats(list.map(r => r.st));
+  const byBucket = {}, byPath = {};
+  BUCKETS.forEach(b => { const g = list.filter(r => r.b === b); if (g.length) byBucket[b] = groupBlock(g); });
+  PATHS.forEach(p => { const g = list.filter(r => r.p === p); if (g.length) byPath[p] = groupBlock(g); });
+  return {
+    totalEarly: list.length, totalConfirmed: conf.length,
+    pctUpSinceTrigger: stAll.pctPos, meanSinceTrigger: stAll.mean, medianSinceTrigger: stAll.median,
+    h30: pctStats(list.map(r => r.r30)), h60: pctStats(list.map(r => r.r60)), h90: pctStats(list.map(r => r.r90)),
+    touched10in90: { n: t10e.length, hits: t10hits, pct: t10e.length ? r1(t10hits / t10e.length * 100) : null },
+    ret20Split: { confirmed: pctStats(conf.map(r => r.r20)), unconfirmed: pctStats(unc.map(r => r.r20)) },
+    byBucket: byBucket, byPath: byPath
+  };
+}
+function activeStats() { return MODE === 'all' ? DATA.stats : computeStats(visibleSignals()); }
+
 function statusCell(r) {
   if (r.cd) return '<span class="badge conf">Confirmed</span> <span class="nm">' + fmtDate(r.cd) + ' · ' + fmtPct(r.sc) + ' since</span>';
   return '<span class="badge early">Early</span>';
 }
+function catCell(r) {
+  return '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span><div class="pathlbl">' + esc(r.p) + '</div>';
+}
 function currentRow(r) {
   return '<tr><td><span class="tk">' + esc(r.t) + '</span> <span class="nm">' + esc(r.name || '') + '</span></td>' +
     '<td>' + fmtDate(r.d) + '</td><td>' + fmtPct(r.st) + '</td><td>' + statusCell(r) + '</td>' +
-    '<td><span class="chip">' + r.b + '</span></td><td class="hidem">' + esc(r.p) + '</td></tr>';
+    '<td>' + catCell(r) + '</td><td><span class="chip">' + r.b + '</span></td></tr>';
 }
 function currentTable(rows) {
-  return '<table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>Status</th><th>Cap</th><th class="hidem">Admission</th></tr></thead><tbody>' +
+  return '<table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>Status</th><th>Category</th><th>Cap</th></tr></thead><tbody>' +
     rows.map(currentRow).join('') + '</tbody></table>';
 }
 
 function renderCurrent() {
-  const sigs = DATA.signals.slice().sort((a,b) => b.d.localeCompare(a.d));
+  const sigs = visibleSignals().sort((a,b) => b.d.localeCompare(a.d));
+  document.getElementById('curCount').textContent = 'Showing ' + sigs.length + ' of ' + DATA.stats.totalEarly + ' signals' + (MODE === 'quality' ? ' — junk category hidden' : '');
   let html = '';
   const awaiting = sigs.filter(r => r.d >= '2026-10-08' && !r.cd);
   if (awaiting.length) {
@@ -144,7 +218,6 @@ function renderCurrent() {
       '<p style="margin-top:0">Early signals from the last 15 days still inside their MACD confirmation window.</p>' +
       currentTable(awaiting) + '</div>';
   }
-  // Current month grouped by week (newest week first)
   const curMonth = DATA.asOf.slice(0,7);
   const curSigs = sigs.filter(r => r.d.slice(0,7) === curMonth);
   const weeks = {};
@@ -153,23 +226,17 @@ function renderCurrent() {
     const md = parseD(k);
     html += '<div class="group-h"><h3>Week of ' + MON3[md.getMonth()] + ' ' + md.getDate() + '</h3><span class="cnt">' + weeks[k].length + ' signals</span></div>' + currentTable(weeks[k]);
   });
-  // Rest of the period grouped by month
   const months = {};
   sigs.filter(r => r.d.slice(0,7) !== curMonth).forEach(r => { const k = r.d.slice(0,7); (months[k] = months[k] || []).push(r); });
   Object.keys(months).sort().reverse().forEach(k => {
     const p = k.split('-');
     html += '<details class="month"><summary>' + MONTHS[+p[1]-1] + ' ' + p[0] + '<span class="cnt">' + months[k].length + ' signals</span></summary>' + currentTable(months[k]) + '</details>';
   });
-  document.getElementById('view-current').innerHTML = html;
+  document.getElementById('current-body').innerHTML = html;
 }
 
 function statCard(title, rowsHtml) {
   return '<div class="card"><h2>' + title + '</h2><table>' + rowsHtml + '</table></div>';
-}
-function horizonRows(h) {
-  return '<tr><td>+30 days</td><td>' + fmtPlain(h.h30.pctPos) + ' positive</td><td class="nm">n=' + h.h30.n + ' · avg ' + fmtPlain(h.h30.mean) + '</td></tr>' +
-         '<tr><td>+60 days</td><td>' + fmtPlain(h.h60.pctPos) + ' positive</td><td class="nm">n=' + h.h60.n + ' · avg ' + fmtPlain(h.h60.mean) + '</td></tr>' +
-         '<tr><td>+90 days</td><td>' + fmtPlain(h.h90.pctPos) + ' positive</td><td class="nm">n=' + h.h90.n + ' · avg ' + fmtPlain(h.h90.mean) + '</td></tr>';
 }
 function groupRows(g) {
   let s = '';
@@ -179,11 +246,21 @@ function groupRows(g) {
   });
   return '<tr><th>Group</th><th>Signals</th><th>Up since</th><th>+30d</th><th>+60d</th><th>+90d</th></tr>' + s;
 }
-
+function renderHeadline() {
+  const st = activeStats();
+  document.getElementById('headline').innerHTML =
+    '<div class="stat"><div class="v">' + st.totalEarly.toLocaleString() + '</div><div class="l">Early signals</div></div>' +
+    '<div class="stat"><div class="v">' + st.totalConfirmed.toLocaleString() + '</div><div class="l">Confirmed</div></div>' +
+    '<div class="stat"><div class="v">' + fmtPlain(st.pctUpSinceTrigger) + '</div><div class="l">Up since trigger</div></div>' +
+    '<div class="stat"><div class="v">' + fmtPlain(st.h30.pctPos) + '</div><div class="l">Positive at +30d</div></div>' +
+    '<div class="stat"><div class="v">' + fmtPlain(st.h60.pctPos) + '</div><div class="l">Positive at +60d</div></div>' +
+    '<div class="stat"><div class="v">' + fmtPlain(st.h90.pctPos) + '</div><div class="l">Positive at +90d</div></div>' +
+    '<div class="stat"><div class="v">' + fmtPlain(st.touched10in90.pct) + '</div><div class="l">Touched +10% ≤ 90d</div></div>';
+}
 function renderRecordStats() {
-  const st = DATA.stats;
+  const st = activeStats();
   let html = '<div class="statgrid">';
-  html += statCard('Forward returns — all Early signals',
+  html += statCard('Forward returns — Early signals in view',
     '<tr><th>Horizon</th><th>Positive</th><th>Sample</th></tr>' +
     '<tr><td>+30 days</td><td>' + fmtPlain(st.h30.pctPos) + '</td><td class="nm">n=' + st.h30.n + ' · avg ' + fmtPlain(st.h30.mean) + ' · median ' + fmtPlain(st.h30.median) + '</td></tr>' +
     '<tr><td>+60 days</td><td>' + fmtPlain(st.h60.pctPos) + '</td><td class="nm">n=' + st.h60.n + ' · avg ' + fmtPlain(st.h60.mean) + ' · median ' + fmtPlain(st.h60.median) + '</td></tr>' +
@@ -195,7 +272,7 @@ function renderRecordStats() {
     '<tr><td>Never confirmed</td><td>' + fmtPlain(st.ret20Split.unconfirmed.pctPos) + '</td><td class="nm">n=' + st.ret20Split.unconfirmed.n + ' · avg ' + fmtPlain(st.ret20Split.unconfirmed.mean) + '</td></tr>');
   html += '</div><div class="statgrid" style="margin-top:16px">';
   html += statCard('By market-cap bucket', groupRows(st.byBucket));
-  html += statCard('By admission path', groupRows(st.byPath));
+  html += statCard('By admission path — the quality split', groupRows(st.byPath));
   html += '</div>';
   document.getElementById('record-stats').innerHTML = html;
 }
@@ -203,17 +280,18 @@ function renderRecordStats() {
 function recordRow(r) {
   return '<tr class="srow" data-tk="' + esc(r.t.toLowerCase()) + '" data-nm="' + esc((r.name||'').toLowerCase()) + '" data-b="' + r.b + '">' +
     '<td><span class="tk">' + esc(r.t) + '</span></td><td>' + fmtDate(r.d) + '</td><td>' + fmtPct(r.st) + '</td>' +
-    '<td>' + fmtPct(r.r30) + '</td><td>' + fmtPct(r.r60) + '</td><td>' + fmtPct(r.r90) + '</td><td>' + statusCell(r) + '</td></tr>';
+    '<td>' + fmtPct(r.r30) + '</td><td>' + fmtPct(r.r60) + '</td><td>' + fmtPct(r.r90) + '</td>' +
+    '<td>' + catCell(r) + '</td><td>' + statusCell(r) + '</td></tr>';
 }
 function renderRecordTable() {
-  const sigs = DATA.signals.slice().sort((a,b) => b.d.localeCompare(a.d));
+  const sigs = visibleSignals().sort((a,b) => b.d.localeCompare(a.d));
   const months = {};
   sigs.forEach(r => { const k = r.d.slice(0,7); (months[k] = months[k] || []).push(r); });
   let html = '';
   Object.keys(months).sort().reverse().forEach(k => {
     const p = k.split('-');
     html += '<div class="mgroup" data-month="' + k + '"><div class="group-h"><h3>' + MONTHS[+p[1]-1] + ' ' + p[0] + '</h3><span class="cnt mcnt">' + months[k].length + ' signals</span></div>' +
-      '<table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>+30d</th><th>+60d</th><th>+90d</th><th>Status</th></tr></thead><tbody>' +
+      '<table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>+30d</th><th>+60d</th><th>+90d</th><th>Category</th><th>Status</th></tr></thead><tbody>' +
       months[k].map(recordRow).join('') + '</tbody></table></div>';
   });
   document.getElementById('record-table').innerHTML = html;
@@ -234,9 +312,15 @@ function applyFilter() {
     g.style.display = vis ? '' : 'none';
     g.querySelector('.mcnt').textContent = vis + ' signals';
   });
-  document.getElementById('shownCount').textContent = 'Showing ' + shown + ' of ' + DATA.stats.totalEarly + ' signals';
+  document.getElementById('shownCount').textContent = 'Showing ' + shown + ' of ' + visibleSignals().length + ' signals in view (' + DATA.stats.totalEarly + ' total)';
 }
 
+function renderAll() { renderHeadline(); renderCurrent(); renderRecordStats(); renderRecordTable(); }
+function setMode(m) {
+  MODE = m;
+  document.querySelectorAll('.seg button').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === m));
+  renderAll();
+}
 function showTab(which) {
   document.getElementById('tab-current').classList.toggle('active', which === 'current');
   document.getElementById('tab-record').classList.toggle('active', which === 'record');
@@ -246,29 +330,19 @@ function showTab(which) {
 
 fetch('data.json').then(r => r.json()).then(d => {
   DATA = d;
-  const st = d.stats;
-  document.getElementById('headline').innerHTML =
-    '<div class="stat"><div class="v">' + st.totalEarly.toLocaleString() + '</div><div class="l">Early signals</div></div>' +
-    '<div class="stat"><div class="v">' + st.totalConfirmed.toLocaleString() + '</div><div class="l">Confirmed</div></div>' +
-    '<div class="stat"><div class="v">' + fmtPlain(st.pctUpSinceTrigger) + '</div><div class="l">Up since trigger</div></div>' +
-    '<div class="stat"><div class="v">' + fmtPlain(st.h30.pctPos) + '</div><div class="l">Positive at +30d</div></div>' +
-    '<div class="stat"><div class="v">' + fmtPlain(st.h60.pctPos) + '</div><div class="l">Positive at +60d</div></div>' +
-    '<div class="stat"><div class="v">' + fmtPlain(st.h90.pctPos) + '</div><div class="l">Positive at +90d</div></div>' +
-    '<div class="stat"><div class="v">' + fmtPlain(st.touched10in90.pct) + '</div><div class="l">Touched +10% ≤ 90d</div></div>';
-  renderCurrent();
-  renderRecordStats();
-  renderRecordTable();
+  renderAll();
   document.getElementById('methodology').innerHTML =
-    'Methodology: backfill of ' + d.windowStart + ' to ' + d.windowEnd + '; performance measured to the ' + d.asOf +
+    'Methodology: backfill of ' + d.windowStart + ' to ' + d.windowEnd + '; returns since trigger measured to the ' + d.priceAsOf +
     ' close, split/dividend adjusted. Fundamentals and market cap are point-in-time: SEC EDGAR facts as originally filed on or before each signal date ' +
     '(TTM = prior fiscal year + current YTD − prior-year same-period YTD); shares outstanding from the closest filing on or before the signal date. ' +
     'The signal log is append-only — a stock admitted at its trigger date is never removed, even if it later falls below the size floors. ' +
+    'Category: <strong>Quality</strong> = admitted as Profitable or FCF-positive; <strong>Junk</strong> = admitted via the $1B+ growth path (neither profitable nor FCF-positive). ' +
     'Universe is US exchange-listed stocks only (NASDAQ / NYSE / NYSE American / NYSE Arca / Cboe) — no OTC. ' +
     'Survivorship caveat: the universe is built from current listings, so companies delisted before the backfill do not appear. ' +
     'The +30/+60/+90-day columns count only signals whose full horizon had elapsed by ' + d.asOf + '; younger signals show —. ' +
     'This site is an educational screening tool, not investment advice.';
 }).catch(e => {
-  document.getElementById('view-current').innerHTML = '<div class="loading">Could not load data.json.</div>';
+  document.getElementById('current-body').innerHTML = '<div class="loading">Could not load data.json.</div>';
 });
 </script>
 </body>
