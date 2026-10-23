@@ -149,6 +149,11 @@
         <button data-mode="all" class="active" onclick="setMode('all')">Quality + Junk</button>
         <button data-mode="quality" onclick="setMode('quality')">Quality only</button>
       </span>
+      <span class="lbl">Chart:</span>
+      <span class="seg seg-chart">
+        <button data-range="daily" onclick="setChartRange('daily')" title="Ticker links open the chart on Yahoo Finance">Daily</button>
+        <button data-range="1y" onclick="setChartRange('1y')" title="Ticker links open the chart on TradingView, 1-year view">1 Year</button>
+      </span>
       <span class="shown" id="curCount"></span>
       <span style="flex:1"></span>
       <span class="lbl">Sort:</span>
@@ -168,6 +173,11 @@
       <span class="seg" id="seg-record">
         <button data-mode="all" class="active" onclick="setMode('all')">Quality + Junk</button>
         <button data-mode="quality" onclick="setMode('quality')">Quality only</button>
+      </span>
+      <span class="lbl">Chart:</span>
+      <span class="seg seg-chart">
+        <button data-range="daily" onclick="setChartRange('daily')" title="Ticker links open the chart on Yahoo Finance">Daily</button>
+        <button data-range="1y" onclick="setChartRange('1y')" title="Ticker links open the chart on TradingView, 1-year view">1 Year</button>
       </span>
     </div>
     <div id="record-stats"></div>
@@ -205,6 +215,30 @@ const BUCKETS = ['Large','Mid','Small'];
 const PATHS = ['Profitable','FCF-positive','Growth $1B+'];
 let DATA = null;
 let MODE = 'all'; // 'all' = Quality + Junk, 'quality' = Quality only
+let CHART_RANGE = 'daily'; // 'daily' = Yahoo Finance chart links, '1y' = TradingView 1-year chart links
+try { if (localStorage.getItem('trifectaChartRange') === '1y') CHART_RANGE = '1y'; } catch (e) {}
+function chartUrl(sym) {
+  return CHART_RANGE === '1y' ? 'https://www.tradingview.com/symbols/' + sym + '/'
+                              : 'https://finance.yahoo.com/quote/' + sym + '/chart';
+}
+function chartTitle(t) {
+  return CHART_RANGE === '1y' ? 'Open the ' + t + ' 1-year chart on TradingView'
+                              : 'Open the ' + t + ' chart on Yahoo Finance';
+}
+function setChartRange(v) {
+  CHART_RANGE = v;
+  try { localStorage.setItem('trifectaChartRange', v); } catch (e) {}
+  applyChartRange();
+}
+function applyChartRange() {
+  document.querySelectorAll('a.tklink').forEach(a => {
+    a.href = chartUrl(a.getAttribute('data-sym'));
+    a.title = chartTitle(a.getAttribute('data-t'));
+  });
+  document.querySelectorAll('.seg-chart button').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-range') === CHART_RANGE);
+  });
+}
 let SORT = 'date'; // 'date' | 'cap' | 'px' | 'az' — shared across both tabs
 
 function sortSignals(list) {
@@ -291,7 +325,7 @@ function activeStats() { return computeStats(visibleSignals().filter(r => r.cd))
 
 function tkLink(r) {
   const sym = encodeURIComponent(String(r.t).replace(/[.\\/]/g, '-'));
-  return '<a href="https://finance.yahoo.com/quote/' + sym + '/chart" target="_blank" rel="noopener" title="Open the ' + esc(r.t) + ' chart on Yahoo Finance">' + esc(r.t) + '</a>';
+  return '<a class="tklink" data-sym="' + sym + '" data-t="' + esc(r.t) + '" href="' + chartUrl(sym) + '" target="_blank" rel="noopener" title="' + chartTitle(r.t) + '">' + esc(r.t) + '</a>';
 }
 function fmtCap(cap) {
   if (cap === null || cap === undefined) return '';
@@ -370,6 +404,7 @@ function renderCurrent() {
     html += '<details class="month"><summary>' + MONTHS[+p[1]-1] + ' ' + p[0] + '<span class="cnt">' + months[k].length + ' signals</span></summary>' + currentTable(months[k]) + '</details>';
   });
   document.getElementById('current-body').innerHTML = html;
+  applyChartRange();
 }
 
 function statCard(title, rowsHtml) {
@@ -462,6 +497,7 @@ function renderRecordTable() {
   // Main table: CONFIRMED signals only. Dead list: closed-out never-confirmed.
   document.getElementById('record-table').innerHTML = monthGroups(sortSignals(vis.filter(r => r.cd)));
   document.getElementById('dead-table').innerHTML = monthGroups(sortSignals(vis.filter(r => r.cl)));
+  applyChartRange();
   applyFilter();
 }
 function applyFilter() {
