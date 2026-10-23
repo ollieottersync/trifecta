@@ -55,6 +55,10 @@
   .qchip { display:inline-block; font-size:.7rem; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:.6px; }
   .qchip.quality { background:rgba(63,185,80,.16); color:var(--grn); border:1px solid rgba(63,185,80,.55); }
   .qchip.junk { background:rgba(240,185,11,.14); color:var(--acc); border:1px solid rgba(240,185,11,.55); }
+  .revchip { display:inline-block; font-size:.66rem; font-weight:800; padding:1px 7px; border-radius:6px; letter-spacing:.4px; margin-top:4px; }
+  .revchip.up { background:rgba(63,185,80,.16); color:var(--grn); border:1px solid rgba(63,185,80,.55); }
+  .revchip.dn { background:rgba(248,81,73,.10); color:var(--red); border:1px solid rgba(248,81,73,.45); }
+  .revsub { color:var(--mut); font-size:.68rem; margin-left:5px; }
   .pathlbl { color:var(--dim); font-size:.76rem; margin-top:2px; }
   .chip { display:inline-block; font-size:.72rem; padding:2px 8px; border-radius:6px; background:#0d1117; border:1px solid var(--line); color:var(--mut); }
   .group-h { display:flex; align-items:baseline; gap:10px; margin:26px 0 4px; }
@@ -262,8 +266,15 @@ function statusCell(r) {
   if (r.cd) return '<span class="badge conf">Confirmed</span> <span class="nm">' + fmtDate(r.cd) + ' · ' + fmtPct(r.sc) + ' since</span>';
   return '<span class="badge early">Early</span>';
 }
+function revBadge(r) {
+  if (r.rg === null || r.rg === undefined) return '';
+  const pct = (r.rgr === null || r.rgr === undefined) ? '' : (r.rgr > 0 ? '+' : '') + r.rgr.toFixed(1) + '%';
+  const tip = 'Point-in-time TTM revenue growth at the signal date: ' + (pct || 'n/a');
+  if (r.rg) return '<div><span class="revchip up" title="' + tip + '">REV ↑</span>' + (pct ? '<span class="revsub">' + pct + ' rev</span>' : '') + '</div>';
+  return '<div><span class="revchip dn" title="' + tip + '">REV ↓</span>' + (pct ? '<span class="revsub">' + pct + ' rev</span>' : '') + '</div>';
+}
 function catCell(r) {
-  return '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span><div class="pathlbl">' + esc(r.p) + '</div>';
+  return '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span><div class="pathlbl">' + esc(r.p) + '</div>' + revBadge(r);
 }
 function currentRow(r) {
   return '<tr><td><span class="tk">' + esc(r.t) + '</span> <span class="nm">' + esc(r.name || '') + '</span>' + trigLine(r) + '</td>' +
@@ -279,7 +290,8 @@ function renderCurrent() {
   const sigs = sortSignals(visibleSignals());
   document.getElementById('curCount').textContent = 'Showing ' + sigs.length + ' of ' + DATA.stats.totalEarly + ' signals' + (MODE === 'quality' ? ' — junk category hidden' : '');
   let html = '';
-  const awaiting = sigs.filter(r => r.d >= '2026-10-08' && !r.cd);
+  const asofD = parseD(DATA.asOf); asofD.setDate(asofD.getDate() - 15);
+  const awaiting = sigs.filter(r => r.d >= isoDay(asofD) && !r.cd);
   if (awaiting.length) {
     html += '<div class="card await"><h2>⏳ Awaiting confirmation (' + awaiting.length + ')</h2>' +
       '<p style="margin-top:0">Early signals from the last 15 days still inside their MACD confirmation window.</p>' +
@@ -422,6 +434,7 @@ fetch('data.json').then(r => r.json()).then(d => {
     '(TTM = prior fiscal year + current YTD − prior-year same-period YTD); shares outstanding from the closest filing on or before the signal date. ' +
     'The signal log is append-only — a stock admitted at its trigger date is never removed, even if it later falls below the size floors. ' +
     'Category: <strong>Quality</strong> = admitted as Profitable or FCF-positive; <strong>Junk</strong> = admitted via the $1B+ growth path (neither profitable nor FCF-positive). ' +
+    'The <strong>REV ↑ / REV ↓</strong> badge shows point-in-time TTM revenue growth at the signal date (SEC filings available by then): green when revenue was still growing, red when it was shrinking, absent when it cannot be established point-in-time. Backfilled tests found revenue growth separates short-horizon (30–60 day) bounce quality — most strongly inside deep-flush names — but is not a 90-day separator, so it is shown as information, not used as an admission gate. ' +
     'Universe is US exchange-listed stocks only (NASDAQ / NYSE / NYSE American / NYSE Arca / Cboe) — no OTC. ' +
     'Survivorship caveat: the universe is built from current listings, so companies delisted before the backfill do not appear. ' +
     'The +30/+60/+90-day columns count only signals whose full horizon had elapsed by ' + d.asOf + '; younger signals show —. ' +
