@@ -59,6 +59,10 @@
   .revchip { display:inline-block; font-size:.66rem; font-weight:800; padding:1px 7px; border-radius:6px; letter-spacing:.4px; margin-top:4px; }
   .revchip.up { background:rgba(63,185,80,.16); color:var(--grn); border:1px solid rgba(63,185,80,.55); }
   .revchip.dn { background:rgba(248,81,73,.10); color:var(--red); border:1px solid rgba(248,81,73,.45); }
+  .tierchip { display:inline-block; font-size:.66rem; font-weight:800; padding:1px 7px; border-radius:6px; letter-spacing:.4px; margin-top:4px; }
+  .tierchip.b { background:rgba(188,140,255,.18); color:#cfa6ff; border:1px solid rgba(188,140,255,.6); }
+  .tierchip.c { background:rgba(88,166,255,.15); color:#7db4ff; border:1px solid rgba(88,166,255,.55); }
+  .tierchip.a { background:rgba(154,167,180,.12); color:var(--mut); border:1px solid var(--line); }
   .revsub { color:var(--mut); font-size:.68rem; margin-left:5px; }
   .pathlbl { color:var(--dim); font-size:.76rem; margin-top:2px; }
   .chip { display:inline-block; font-size:.72rem; padding:2px 8px; border-radius:6px; background:#0d1117; border:1px solid var(--line); color:var(--mut); }
@@ -291,8 +295,19 @@ function revBadge(r) {
   if (r.rg) return '<div><span class="revchip up" title="' + tip + '">REVENUE ↑</span>' + (pct ? '<span class="revsub">' + pct + ' rev</span>' : '') + '</div>';
   return '<div><span class="revchip dn" title="' + tip + '">REVENUE ↓</span>' + (pct ? '<span class="revsub">' + pct + ' rev</span>' : '') + '</div>';
 }
+function tierBadge(r) {
+  if (!r.tier) return '';
+  const w = (r.w2 === null || r.w2 === undefined) ? '' : '<span class="revsub">' + (r.w2 > 0 ? '+' : '') + r.w2.toFixed(0) + '% vs 200wk</span>';
+  const labels = { B: 'TIER B ★ TOP', C: 'TIER C — SELECT', A: 'TIER A' };
+  const tips = {
+    B: 'Tier B: Quality, closed below its 200-week average at the trigger, with RSI bullish divergence. 2026 backfill: 84% positive since trigger, mean +24%.',
+    C: 'Tier C: Quality, closed below its 200-week average at the trigger, with RSI divergence or >=1.5x volume expansion. 2026 backfill: 76% positive since trigger, mean +20%.',
+    A: 'Tier A: Quality, closed below its 200-week average at the trigger. 2026 backfill: 72% positive since trigger, mean +13%.'
+  };
+  return '<div><span class="tierchip ' + r.tier.toLowerCase() + '" title="' + tips[r.tier] + '">' + labels[r.tier] + '</span>' + w + '</div>';
+}
 function catCell(r) {
-  return '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span><div class="pathlbl">' + esc(r.p) + '</div>' + revBadge(r);
+  return '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span><div class="pathlbl">' + esc(r.p) + '</div>' + revBadge(r) + tierBadge(r);
 }
 function currentRow(r) {
   return '<tr><td><span class="tk">' + esc(r.t) + '</span> <span class="nm">' + esc(r.name || '') + '</span>' + trigLine(r) + '</td>' +
@@ -521,6 +536,7 @@ fetch('data.json').then(r => r.json()).then(d => {
     '<strong>All performance statistics on this page are computed over confirmed signals only</strong> (n=' + d.stats.totalConfirmed + ' of ' + d.stats.totalEarly + ' Early signals), shown from both entries — the Early trigger and the confirmation cross — because the two decision points are graded separately. Never-confirmed signals feed no statistic. ' +
     'Category: <strong>Quality</strong> = admitted as Profitable or FCF-positive; <strong>Junk</strong> = admitted via the $1B+ growth path (neither profitable nor FCF-positive). ' +
     'The <strong>REVENUE ↑ / REVENUE ↓</strong> badge shows point-in-time TTM revenue growth at the signal date (SEC filings available by then): green when revenue was still growing, red when it was shrinking, absent when it cannot be established point-in-time. Backfilled tests found revenue growth separates short-horizon (30–60 day) bounce quality — most strongly inside deep-flush names — but is not a 90-day separator, so it is shown as information, not used as an admission gate. ' +
+    'The <strong>TIER A / C / B</strong> badges rank Quality signals by point-in-time technicals at the trigger, measured in an October 2026 study of the confirmed cohort: <strong>Tier A</strong> = closed below the 200-week average (deep washout; 72% finished positive since trigger vs 60% for all confirmed, mean +13%), <strong>Tier C</strong> = Tier A plus RSI bullish divergence or ≥1.5× volume expansion (76%, mean +20%), <strong>Tier B</strong> = Tier A plus RSI bullish divergence (84%, mean +24%). Tiers prioritize investigation only — they are not an admission gate, and Junk signals earn no tier (below-200-week Junk finished 41% positive, mean −1.5%). ' +
     'Universe is US exchange-listed stocks only (NASDAQ / NYSE / NYSE American / NYSE Arca / Cboe) — no OTC. ' +
     'Survivorship caveat: the universe is built from current listings, so companies delisted before the backfill do not appear. ' +
     'The +30/+60/+90-day columns count only signals whose full horizon had elapsed by ' + d.asOf + '; younger signals show —. ' +
