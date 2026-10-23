@@ -18,7 +18,13 @@
   .card p, .card li { color:#c9d4e0; line-height:1.55; }
   ul { margin:8px 0 8px 18px; padding:0; }
   .stats-strip { display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 6px; }
-  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 16px; min-width:128px; flex:1; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 16px; min-width:128px; flex:1; max-width:100%; }
+  .stat.hot { background:rgba(63,185,80,.12); border-color:rgba(63,185,80,.65); }
+  .stat.hot .v { color:var(--grn); }
+  .pctpill { display:inline-block; padding:1px 9px; border-radius:12px; border:1px solid transparent; }
+  .pctpill.hot { background:rgba(63,185,80,.14); color:var(--grn); border-color:rgba(63,185,80,.55); font-weight:700; }
+  .tscroll { overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch; }
+  .card { max-width:100%; }
   .stat .v { font-size:1.45rem; font-weight:700; }
   .stat .l { color:var(--mut); font-size:.78rem; text-transform:uppercase; letter-spacing:.4px; margin-top:2px; }
   .tabs { display:flex; gap:8px; margin:26px 0 6px; border-bottom:1px solid var(--line); }
@@ -67,6 +73,15 @@
   code { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:1px 6px; }
   .loading { color:var(--mut); padding:30px 0; }
   @media (max-width:640px){ .hidem { display:none; } h1{font-size:1.8rem;} }
+  @media (max-width:480px){
+    .wrap { padding:28px 12px 48px; }
+    .card { padding:14px 14px; }
+    table { font-size:.85rem; }
+    th, td { padding:5px 6px; }
+    .capcol { display:none; }
+    .stat { min-width:104px; padding:8px 12px; }
+    .stat .v { font-size:1.2rem; }
+  }
 </style>
 </head>
 <body>
@@ -198,7 +213,7 @@ function computeStats(list) {
     byBucket: byBucket, byPath: byPath, byCat: byCat
   };
 }
-function activeStats() { return MODE === 'all' ? DATA.stats : computeStats(visibleSignals()); }
+function activeStats() { return computeStats(visibleSignals()); }
 
 function statusCell(r) {
   if (r.cd) return '<span class="badge conf">Confirmed</span> <span class="nm">' + fmtDate(r.cd) + ' · ' + fmtPct(r.sc) + ' since</span>';
@@ -210,11 +225,11 @@ function catCell(r) {
 function currentRow(r) {
   return '<tr><td><span class="tk">' + esc(r.t) + '</span> <span class="nm">' + esc(r.name || '') + '</span></td>' +
     '<td>' + fmtDate(r.d) + '</td><td>' + fmtPct(r.st) + '</td><td>' + statusCell(r) + '</td>' +
-    '<td>' + catCell(r) + '</td><td><span class="chip">' + r.b + '</span></td></tr>';
+    '<td>' + catCell(r) + '</td><td class="capcol"><span class="chip">' + r.b + '</span></td></tr>';
 }
 function currentTable(rows) {
-  return '<table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>Status</th><th>Category</th><th>Cap</th></tr></thead><tbody>' +
-    rows.map(currentRow).join('') + '</tbody></table>';
+  return '<div class="tscroll"><table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>Status</th><th>Category</th><th class="capcol">Cap</th></tr></thead><tbody>' +
+    rows.map(currentRow).join('') + '</tbody></table></div>';
 }
 
 function renderCurrent() {
@@ -245,54 +260,56 @@ function renderCurrent() {
 }
 
 function statCard(title, rowsHtml) {
-  return '<div class="card"><h2>' + title + '</h2><table>' + rowsHtml + '</table></div>';
+  return '<div class="card"><h2>' + title + '</h2><div class="tscroll"><table>' + rowsHtml + '</table></div></div>';
 }
 function groupRows(g) {
   let s = '';
   Object.keys(g).forEach(k => {
     const v = g[k];
-    s += '<tr><td>' + esc(k) + '</td><td>' + v.n + '</td><td>' + fmtPlain(v.pctUpSince) + '</td><td>' + fmtPlain(v.h30.pctPos) + '</td><td>' + fmtPlain(v.h60.pctPos) + '</td><td>' + fmtPlain(v.h90.pctPos) + '</td></tr>';
+    s += '<tr><td>' + esc(k) + '</td><td>' + v.n + '</td><td>' + pctPill(v.pctUpSince) + '</td><td>' + pctPill(v.h30.pctPos) + '</td><td>' + pctPill(v.h60.pctPos) + '</td><td>' + pctPill(v.h90.pctPos) + '</td></tr>';
   });
   return '<tr><th>Group</th><th>Signals</th><th>Up since</th><th>+30d</th><th>+60d</th><th>+90d</th></tr>' + s;
 }
 function renderHeadline() {
   const st = activeStats();
+  const tile = (v, label, isPct) => '<div class="stat' + (isPct && v !== null && v !== undefined && v > 65 ? ' hot' : '') + '"><div class="v">' + (isPct ? fmtPlain(v) : v.toLocaleString()) + '</div><div class="l">' + label + '</div></div>';
   document.getElementById('headline').innerHTML =
-    '<div class="stat"><div class="v">' + st.totalEarly.toLocaleString() + '</div><div class="l">Early signals</div></div>' +
-    '<div class="stat"><div class="v">' + st.totalConfirmed.toLocaleString() + '</div><div class="l">Confirmed</div></div>' +
-    '<div class="stat"><div class="v">' + fmtPlain(st.pctUpSinceTrigger) + '</div><div class="l">Up since trigger</div></div>' +
-    '<div class="stat"><div class="v">' + fmtPlain(st.h30.pctPos) + '</div><div class="l">Positive at +30d</div></div>' +
-    '<div class="stat"><div class="v">' + fmtPlain(st.h60.pctPos) + '</div><div class="l">Positive at +60d</div></div>' +
-    '<div class="stat"><div class="v">' + fmtPlain(st.h90.pctPos) + '</div><div class="l">Positive at +90d</div></div>' +
-    '<div class="stat"><div class="v">' + fmtPlain(st.touched10in90.pct) + '</div><div class="l">Touched +10% ≤ 90d</div></div>';
+    tile(st.totalEarly, 'Early signals', false) +
+    tile(st.totalConfirmed, 'Confirmed', false) +
+    tile(st.pctUpSinceTrigger, 'Up since trigger', true) +
+    tile(st.h30.pctPos, 'Positive at +30d', true) +
+    tile(st.h60.pctPos, 'Positive at +60d', true) +
+    tile(st.h90.pctPos, 'Positive at +90d', true) +
+    tile(st.touched10in90.pct, 'Touched +10% ≤ 90d', true);
 }
 function fmtSigned(v) { return (v === null || v === undefined) ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%'; }
+function pctPill(v) { return '<span class="pctpill' + (v !== null && v !== undefined && v > 65 ? ' hot' : '') + '">' + fmtPlain(v) + '</span>'; }
 function hTable(blk) {
-  const row = (lbl, s) => '<tr><td>' + lbl + '</td><td>' + fmtPlain(s.pctPos) + '</td><td class="pos">' + fmtSigned(s.avgGain) + '</td><td class="neg">' + fmtSigned(s.avgLoss) + '</td><td class="nm">' + s.n + '</td></tr>';
-  return '<table><tr><th>Horizon</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th><th>n</th></tr>' +
-    row('Since trigger', blk.since) + row('+30 days', blk.h30) + row('+60 days', blk.h60) + row('+90 days', blk.h90) + '</table>';
+  const row = (lbl, s) => '<tr><td>' + lbl + '</td><td>' + pctPill(s.pctPos) + '</td><td class="pos">' + fmtSigned(s.avgGain) + '</td><td class="neg">' + fmtSigned(s.avgLoss) + '</td><td class="nm">' + s.n + '</td></tr>';
+  return '<div class="tscroll"><table><tr><th>Horizon</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th><th>n</th></tr>' +
+    row('Since trigger', blk.since) + row('+30 days', blk.h30) + row('+60 days', blk.h60) + row('+90 days', blk.h90) + '</table></div>';
 }
 function groupHTable(g) {
-  let s = '<table><tr><th>Group</th><th>Horizon</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th></tr>';
+  let s = '<div class="tscroll"><table><tr><th>Group</th><th>Horizon</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th></tr>';
   Object.keys(g).forEach(k => {
     const v = g[k];
     [['Since trigger', v.since], ['+30 days', v.h30], ['+60 days', v.h60], ['+90 days', v.h90]].forEach((pair, i) => {
       s += '<tr>' + (i === 0 ? '<td rowspan="4"><strong>' + esc(k) + '</strong><div class="nm">n=' + v.n + '</div></td>' : '') +
-        '<td>' + pair[0] + '</td><td>' + fmtPlain(pair[1].pctPos) + '</td><td class="pos">' + fmtSigned(pair[1].avgGain) + '</td><td class="neg">' + fmtSigned(pair[1].avgLoss) + '</td></tr>';
+        '<td>' + pair[0] + '</td><td>' + pctPill(pair[1].pctPos) + '</td><td class="pos">' + fmtSigned(pair[1].avgGain) + '</td><td class="neg">' + fmtSigned(pair[1].avgLoss) + '</td></tr>';
     });
   });
-  return s + '</table>';
+  return s + '</table></div>';
 }
 function renderRecordStats() {
   const st = activeStats();
   let html = '<div class="statgrid">';
   html += '<div class="card"><h2>Forward returns — signals in view (winners vs losers)</h2>' +
     hTable({ since: st.sinceTrigger, h30: st.h30, h60: st.h60, h90: st.h90 }) +
-    '<p style="margin-bottom:0" class="nm">Touched +10% within 90 days: <strong style="color:var(--txt)">' + fmtPlain(st.touched10in90.pct) + '</strong> (n=' + st.touched10in90.n + ', intraday high)</p></div>';
+    '<p style="margin-bottom:0" class="nm">Touched +10% within 90 days: ' + pctPill(st.touched10in90.pct) + ' (n=' + st.touched10in90.n + ', intraday high)</p></div>';
   html += statCard('Does confirmation help? (return at ~20 trading days, from Early entry)',
     '<tr><th>Subset</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th><th>n</th></tr>' +
-    '<tr><td>Confirmed</td><td>' + fmtPlain(st.ret20Split.confirmed.pctPos) + '</td><td class="pos">' + fmtSigned(st.ret20Split.confirmed.avgGain) + '</td><td class="neg">' + fmtSigned(st.ret20Split.confirmed.avgLoss) + '</td><td class="nm">' + st.ret20Split.confirmed.n + '</td></tr>' +
-    '<tr><td>Never confirmed</td><td>' + fmtPlain(st.ret20Split.unconfirmed.pctPos) + '</td><td class="pos">' + fmtSigned(st.ret20Split.unconfirmed.avgGain) + '</td><td class="neg">' + fmtSigned(st.ret20Split.unconfirmed.avgLoss) + '</td><td class="nm">' + st.ret20Split.unconfirmed.n + '</td></tr>');
+    '<tr><td>Confirmed</td><td>' + pctPill(st.ret20Split.confirmed.pctPos) + '</td><td class="pos">' + fmtSigned(st.ret20Split.confirmed.avgGain) + '</td><td class="neg">' + fmtSigned(st.ret20Split.confirmed.avgLoss) + '</td><td class="nm">' + st.ret20Split.confirmed.n + '</td></tr>' +
+    '<tr><td>Never confirmed</td><td>' + pctPill(st.ret20Split.unconfirmed.pctPos) + '</td><td class="pos">' + fmtSigned(st.ret20Split.unconfirmed.avgGain) + '</td><td class="neg">' + fmtSigned(st.ret20Split.unconfirmed.avgLoss) + '</td><td class="nm">' + st.ret20Split.unconfirmed.n + '</td></tr>');
   html += '</div><div class="statgrid" style="margin-top:16px">';
   html += '<div class="card"><h2>By category — All / Quality / Junk</h2>' + groupHTable(st.byCat) + '</div>';
   html += '<div class="card"><h2>By admission path — the quality split</h2>' + groupHTable(st.byPath) + '</div>';
@@ -316,8 +333,8 @@ function renderRecordTable() {
   Object.keys(months).sort().reverse().forEach(k => {
     const p = k.split('-');
     html += '<div class="mgroup" data-month="' + k + '"><div class="group-h"><h3>' + MONTHS[+p[1]-1] + ' ' + p[0] + '</h3><span class="cnt mcnt">' + months[k].length + ' signals</span></div>' +
-      '<table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>+30d</th><th>+60d</th><th>+90d</th><th>Category</th><th>Status</th></tr></thead><tbody>' +
-      months[k].map(recordRow).join('') + '</tbody></table></div>';
+      '<div class="tscroll"><table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>+30d</th><th>+60d</th><th>+90d</th><th>Category</th><th>Status</th></tr></thead><tbody>' +
+      months[k].map(recordRow).join('') + '</tbody></table></div></div>';
   });
   document.getElementById('record-table').innerHTML = html;
   applyFilter();
