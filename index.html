@@ -44,6 +44,8 @@
   tr:last-child td { border-bottom:none; }
   .tk { font-weight:700; font-size:1rem; }
   .nm { color:var(--dim); font-size:.8rem; font-weight:400; }
+  .trigline { color:#b3c0cd; font-size:.8em; margin-top:2px; letter-spacing:.2px; }
+  .trigline .at { color:var(--mut); font-size:.92em; }
   .pos { color:var(--grn); font-weight:600; }
   .neg { color:var(--red); font-weight:600; }
   .flat { color:var(--mut); }
@@ -215,6 +217,15 @@ function computeStats(list) {
 }
 function activeStats() { return computeStats(visibleSignals()); }
 
+function fmtCap(cap) {
+  if (cap === null || cap === undefined) return '';
+  if (cap >= 1e9) { const v = cap / 1e9; return '$' + (v >= 100 ? Math.round(v) : v.toFixed(1)) + 'B'; }
+  return '$' + Math.round(cap / 1e6) + 'M';
+}
+function trigLine(r) {
+  if (r.px === null || r.px === undefined) return '';
+  return '<div class="trigline">$' + r.px.toFixed(2) + ' · ' + fmtCap(r.cap) + ' cap <span class="at">at trigger</span></div>';
+}
 function statusCell(r) {
   if (r.cd) return '<span class="badge conf">Confirmed</span> <span class="nm">' + fmtDate(r.cd) + ' · ' + fmtPct(r.sc) + ' since</span>';
   return '<span class="badge early">Early</span>';
@@ -223,7 +234,7 @@ function catCell(r) {
   return '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span><div class="pathlbl">' + esc(r.p) + '</div>';
 }
 function currentRow(r) {
-  return '<tr><td><span class="tk">' + esc(r.t) + '</span> <span class="nm">' + esc(r.name || '') + '</span></td>' +
+  return '<tr><td><span class="tk">' + esc(r.t) + '</span> <span class="nm">' + esc(r.name || '') + '</span>' + trigLine(r) + '</td>' +
     '<td>' + fmtDate(r.d) + '</td><td>' + fmtPct(r.st) + '</td><td>' + statusCell(r) + '</td>' +
     '<td>' + catCell(r) + '</td><td class="capcol"><span class="chip">' + r.b + '</span></td></tr>';
 }
@@ -321,7 +332,7 @@ function renderRecordStats() {
 
 function recordRow(r) {
   return '<tr class="srow" data-tk="' + esc(r.t.toLowerCase()) + '" data-nm="' + esc((r.name||'').toLowerCase()) + '" data-b="' + r.b + '">' +
-    '<td><span class="tk">' + esc(r.t) + '</span></td><td>' + fmtDate(r.d) + '</td><td>' + fmtPct(r.st) + '</td>' +
+    '<td><span class="tk">' + esc(r.t) + '</span>' + trigLine(r) + '</td><td>' + fmtDate(r.d) + '</td><td>' + fmtPct(r.st) + '</td>' +
     '<td>' + fmtPct(r.r30) + '</td><td>' + fmtPct(r.r60) + '</td><td>' + fmtPct(r.r90) + '</td>' +
     '<td>' + catCell(r) + '</td><td>' + statusCell(r) + '</td></tr>';
 }
