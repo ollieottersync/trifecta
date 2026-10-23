@@ -52,6 +52,7 @@
   .badge { display:inline-block; font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:20px; letter-spacing:.3px; }
   .badge.conf { background:rgba(63,185,80,.15); color:var(--grn); border:1px solid rgba(63,185,80,.5); }
   .badge.early { background:rgba(240,185,11,.12); color:var(--acc); border:1px solid rgba(240,185,11,.5); }
+  .badge.closed { background:rgba(154,167,180,.10); color:var(--mut); border:1px solid var(--line); }
   .qchip { display:inline-block; font-size:.7rem; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:.6px; }
   .qchip.quality { background:rgba(63,185,80,.16); color:var(--grn); border:1px solid rgba(63,185,80,.55); }
   .qchip.junk { background:rgba(240,185,11,.14); color:var(--acc); border:1px solid rgba(240,185,11,.55); }
@@ -78,6 +79,9 @@
   .statgrid .card { margin:0; }
   .foot { color:var(--dim); font-size:.85rem; margin-top:36px; line-height:1.65; }
   code { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:1px 6px; }
+  .about-h { cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .about-chev { color:var(--mut); font-size:1.05rem; transition:transform .15s ease; }
+  .about-chev.open { transform:rotate(90deg); }
   .loading { color:var(--mut); padding:30px 0; }
   @media (max-width:640px){ .hidem { display:none; } h1{font-size:1.8rem;} }
   @media (max-width:480px){
@@ -96,8 +100,9 @@
   <h1><span class="tri">▲</span> TRIFECTA</h1>
   <div class="sub">Three oversold signals. One trigger. A public track record.</div>
 
-  <div class="card">
-    <h2>The screen</h2>
+  <div class="card" id="about-card">
+    <h2 class="about-h" style="margin:0" onclick="toggleAbout()">About the Trifecta Screener <span id="about-chev" class="about-chev">▸</span></h2>
+    <div id="about-body" style="display:none">
     <p>An <strong>Early (bottoming)</strong> signal fires when, within a 7-day cluster:
     <strong>RSI(14)</strong> is at or below <strong>35</strong>, the <strong>fast stochastic (5,3)</strong> crosses up
     out of oversold (%K and %D both under 20), and the <strong>MACD (12,26,9)</strong> histogram bottoms and rises
@@ -109,9 +114,11 @@
     price ≥ $5 and 20-day average volume ≥ 500k shares. Market cap and fundamentals are judged on the SEC filings
     available <strong>at the signal date</strong> — never on today's numbers. Use the category toggle on either tab to
     see what the junk filter is worth: every figure on the page recomputes for the visible set.</p>
+    </div>
   </div>
 
   <div class="stats-strip" id="headline"></div>
+  <div class="shown" id="headline-note" style="margin:0 0 6px"></div>
 
   <div class="tabs">
     <button class="tab active" id="tab-current" onclick="showTab('current')">Current</button>
@@ -164,6 +171,11 @@
     </div>
     <div class="shown" id="shownCount"></div>
     <div id="record-table"></div>
+    <div id="dead-wrap" style="margin-top:34px">
+      <div class="group-h"><h3>Early signals that never confirmed — excluded from stats</h3><span class="cnt" id="deadCount"></span></div>
+      <p class="nm" style="margin:2px 0 10px">These Early signals never got their MACD confirmation within the 15-day window and were closed out — their live figures are frozen at closeout. They are kept for reference only and feed no statistic on this page.</p>
+      <div id="dead-table"></div>
+    </div>
   </div>
 
   <p class="foot" id="methodology"></p>
@@ -246,12 +258,16 @@ function computeStats(list) {
     pctUpSinceTrigger: stAll.pctPos, meanSinceTrigger: stAll.mean, medianSinceTrigger: stAll.median,
     sinceTrigger: stAll,
     h30: pctStats(list.map(r => r.r30)), h60: pctStats(list.map(r => r.r60)), h90: pctStats(list.map(r => r.r90)),
+    sinceCross: pctStats(list.map(r => r.sc)),
+    c30: pctStats(list.map(r => r.c30)), c60: pctStats(list.map(r => r.c60)), c90: pctStats(list.map(r => r.c90)),
+    ret20: pctStats(list.map(r => r.r20)),
     touched10in90: { n: t10e.length, hits: t10hits, pct: t10e.length ? r1(t10hits / t10e.length * 100) : null },
-    ret20Split: { confirmed: pctStats(conf.map(r => r.r20)), unconfirmed: pctStats(unc.map(r => r.r20)) },
     byBucket: byBucket, byPath: byPath, byCat: byCat
   };
 }
-function activeStats() { return computeStats(visibleSignals()); }
+// Stats population is CONFIRMED SIGNALS ONLY (both tabs' figures); the
+// category toggle still applies within the confirmed set.
+function activeStats() { return computeStats(visibleSignals().filter(r => r.cd)); }
 
 function fmtCap(cap) {
   if (cap === null || cap === undefined) return '';
@@ -264,6 +280,7 @@ function trigLine(r) {
 }
 function statusCell(r) {
   if (r.cd) return '<span class="badge conf">Confirmed</span> <span class="nm">' + fmtDate(r.cd) + ' · ' + fmtPct(r.sc) + ' since</span>';
+  if (r.cl) return '<span class="badge closed">CLOSED — never confirmed</span>';
   return '<span class="badge early">Early</span>';
 }
 function revBadge(r) {
@@ -287,15 +304,17 @@ function currentTable(rows) {
 }
 
 function renderCurrent() {
-  const sigs = sortSignals(visibleSignals());
+  // Closed-out signals (never confirmed within 15 days) leave Current entirely.
+  const sigs = sortSignals(visibleSignals().filter(r => !r.cl));
   document.getElementById('curCount').textContent = 'Showing ' + sigs.length + ' of ' + DATA.stats.totalEarly + ' signals' + (MODE === 'quality' ? ' — junk category hidden' : '');
   let html = '';
   const asofD = parseD(DATA.asOf); asofD.setDate(asofD.getDate() - 15);
   const awaiting = sigs.filter(r => r.d >= isoDay(asofD) && !r.cd);
   if (awaiting.length) {
-    html += '<div class="card await"><h2>⏳ Awaiting confirmation (' + awaiting.length + ')</h2>' +
-      '<p style="margin-top:0">Early signals from the last 15 days still inside their MACD confirmation window.</p>' +
-      currentTable(awaiting) + '</div>';
+    html += '<div class="card await"><h2 class="about-h" style="margin:0" onclick="toggleAwait()">⏳ Awaiting confirmation (' + awaiting.length + ') <span id="await-chev" class="about-chev' + (AWAIT_OPEN ? ' open' : '') + '">▸</span></h2>' +
+      '<div id="await-body" style="display:' + (AWAIT_OPEN ? '' : 'none') + '">' +
+      '<p style="margin-top:10px">Early signals from the last 15 days still inside their MACD confirmation window.</p>' +
+      currentTable(awaiting) + '</div></div>';
   }
   const curMonth = DATA.asOf.slice(0,7);
   const curSigs = sigs.filter(r => r.d.slice(0,7) === curMonth);
@@ -329,20 +348,23 @@ function renderHeadline() {
   const st = activeStats();
   const tile = (v, label, isPct) => '<div class="stat' + (isPct && v !== null && v !== undefined && v > 65 ? ' hot' : '') + '"><div class="v">' + (isPct ? fmtPlain(v) : v.toLocaleString()) + '</div><div class="l">' + label + '</div></div>';
   document.getElementById('headline').innerHTML =
-    tile(st.totalEarly, 'Early signals', false) +
-    tile(st.totalConfirmed, 'Confirmed', false) +
+    tile(st.totalConfirmed, 'Confirmed signals', false) +
     tile(st.pctUpSinceTrigger, 'Up since trigger', true) +
     tile(st.h30.pctPos, 'Positive at +30d', true) +
     tile(st.h60.pctPos, 'Positive at +60d', true) +
     tile(st.h90.pctPos, 'Positive at +90d', true) +
-    tile(st.touched10in90.pct, 'Touched +10% ≤ 90d', true);
+    tile(st.touched10in90.pct, 'Touched +10% ≤ 90d', true) +
+    tile(st.sinceCross.pctPos, 'Up since confirmation', true);
+  document.getElementById('headline-note').textContent =
+    'All performance figures are computed over confirmed signals only (n=' + st.totalConfirmed + ' of ' + DATA.stats.totalEarly +
+    ' Early signals). Early signals that never confirmed are listed separately on the Track Record tab and excluded from every statistic.';
 }
 function fmtSigned(v) { return (v === null || v === undefined) ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%'; }
 function pctPill(v) { return '<span class="pctpill' + (v !== null && v !== undefined && v > 65 ? ' hot' : '') + '">' + fmtPlain(v) + '</span>'; }
-function hTable(blk) {
+function hTable(blk, sinceLbl) {
   const row = (lbl, s) => '<tr><td>' + lbl + '</td><td>' + pctPill(s.pctPos) + '</td><td class="pos">' + fmtSigned(s.avgGain) + '</td><td class="neg">' + fmtSigned(s.avgLoss) + '</td><td class="nm">' + s.n + '</td></tr>';
   return '<div class="tscroll"><table><tr><th>Horizon</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th><th>n</th></tr>' +
-    row('Since trigger', blk.since) + row('+30 days', blk.h30) + row('+60 days', blk.h60) + row('+90 days', blk.h90) + '</table></div>';
+    row(sinceLbl || 'Since trigger', blk.since) + row('+30 days', blk.h30) + row('+60 days', blk.h60) + row('+90 days', blk.h90) + '</table></div>';
 }
 function groupHTable(g) {
   let s = '<div class="tscroll"><table><tr><th>Group</th><th>Horizon</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th></tr>';
@@ -357,19 +379,20 @@ function groupHTable(g) {
 }
 function renderRecordStats() {
   const st = activeStats();
+  const n = st.totalConfirmed;
   let html = '<div class="statgrid">';
-  html += '<div class="card"><h2>Forward returns — signals in view (winners vs losers)</h2>' +
+  html += '<div class="card"><h2>Forward returns — from Early trigger · Confirmed signals (n=' + n + ')</h2>' +
     hTable({ since: st.sinceTrigger, h30: st.h30, h60: st.h60, h90: st.h90 }) +
+    '<p class="nm">Win at ~20 trading sessions from the Early entry: ' + pctPill(st.ret20.pctPos) + ' · mean ' + fmtSigned(st.ret20.mean) + ' (n=' + st.ret20.n + ')</p>' +
     '<p style="margin-bottom:0" class="nm">Touched +10% within 90 days: ' + pctPill(st.touched10in90.pct) + ' (n=' + st.touched10in90.n + ', intraday high)</p></div>';
-  html += statCard('Does confirmation help? (return at ~20 trading days, from Early entry)',
-    '<tr><th>Subset</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th><th>n</th></tr>' +
-    '<tr><td>Confirmed</td><td>' + pctPill(st.ret20Split.confirmed.pctPos) + '</td><td class="pos">' + fmtSigned(st.ret20Split.confirmed.avgGain) + '</td><td class="neg">' + fmtSigned(st.ret20Split.confirmed.avgLoss) + '</td><td class="nm">' + st.ret20Split.confirmed.n + '</td></tr>' +
-    '<tr><td>Never confirmed</td><td>' + pctPill(st.ret20Split.unconfirmed.pctPos) + '</td><td class="pos">' + fmtSigned(st.ret20Split.unconfirmed.avgGain) + '</td><td class="neg">' + fmtSigned(st.ret20Split.unconfirmed.avgLoss) + '</td><td class="nm">' + st.ret20Split.unconfirmed.n + '</td></tr>');
+  html += '<div class="card"><h2>Forward returns — from confirmation cross · Confirmed signals (n=' + n + ')</h2>' +
+    hTable({ since: st.sinceCross, h30: st.c30, h60: st.c60, h90: st.c90 }, 'Since cross') +
+    '<p style="margin-bottom:0" class="nm">Measured from the MACD cross entry — a later, higher entry than the trigger. The cross is the filter that selects this population, not a second buy point.</p></div>';
   html += '</div><div class="statgrid" style="margin-top:16px">';
-  html += '<div class="card"><h2>By category — All / Quality / Junk</h2>' + groupHTable(st.byCat) + '</div>';
-  html += '<div class="card"><h2>By admission path — the quality split</h2>' + groupHTable(st.byPath) + '</div>';
+  html += '<div class="card"><h2>By category — All / Quality / Junk · confirmed only</h2>' + groupHTable(st.byCat) + '</div>';
+  html += '<div class="card"><h2>By admission path — the quality split · confirmed only</h2>' + groupHTable(st.byPath) + '</div>';
   html += '</div><div class="statgrid" style="margin-top:16px">';
-  html += statCard('By market-cap bucket (% positive)', groupRows(st.byBucket));
+  html += statCard('By market-cap bucket (% positive) · confirmed only', groupRows(st.byBucket));
   html += '</div>';
   document.getElementById('record-stats').innerHTML = html;
 }
@@ -380,10 +403,9 @@ function recordRow(r) {
     '<td>' + fmtPct(r.r30) + '</td><td>' + fmtPct(r.r60) + '</td><td>' + fmtPct(r.r90) + '</td>' +
     '<td>' + catCell(r) + '</td><td>' + statusCell(r) + '</td></tr>';
 }
-function renderRecordTable() {
-  const sigs = sortSignals(visibleSignals());
+function monthGroups(rows) {
   const months = {};
-  sigs.forEach(r => { const k = r.d.slice(0,7); (months[k] = months[k] || []).push(r); });
+  rows.forEach(r => { const k = r.d.slice(0,7); (months[k] = months[k] || []).push(r); });
   let html = '';
   Object.keys(months).sort().reverse().forEach(k => {
     const p = k.split('-');
@@ -391,25 +413,38 @@ function renderRecordTable() {
       '<div class="tscroll"><table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>+30d</th><th>+60d</th><th>+90d</th><th>Category</th><th>Status</th></tr></thead><tbody>' +
       months[k].map(recordRow).join('') + '</tbody></table></div></div>';
   });
-  document.getElementById('record-table').innerHTML = html;
+  return html;
+}
+function renderRecordTable() {
+  const vis = visibleSignals();
+  // Main table: CONFIRMED signals only. Dead list: closed-out never-confirmed.
+  document.getElementById('record-table').innerHTML = monthGroups(sortSignals(vis.filter(r => r.cd)));
+  document.getElementById('dead-table').innerHTML = monthGroups(sortSignals(vis.filter(r => r.cl)));
   applyFilter();
 }
 function applyFilter() {
   if (!DATA) return;
   const q = document.getElementById('q').value.trim().toLowerCase();
   const b = document.getElementById('bucketSel').value;
-  let shown = 0;
-  document.querySelectorAll('#record-table .mgroup').forEach(g => {
-    let vis = 0;
-    g.querySelectorAll('.srow').forEach(row => {
-      const ok = (!q || row.dataset.tk.includes(q) || row.dataset.nm.includes(q)) && (!b || row.dataset.b === b);
-      row.style.display = ok ? '' : 'none';
-      if (ok) { vis++; shown++; }
+  let shown = 0, shownDead = 0;
+  const scan = (sel, isDead) => {
+    document.querySelectorAll(sel + ' .mgroup').forEach(g => {
+      let vis = 0;
+      g.querySelectorAll('.srow').forEach(row => {
+        const ok = (!q || row.dataset.tk.includes(q) || row.dataset.nm.includes(q)) && (!b || row.dataset.b === b);
+        row.style.display = ok ? '' : 'none';
+        if (ok) { vis++; if (isDead) shownDead++; else shown++; }
+      });
+      g.style.display = vis ? '' : 'none';
+      g.querySelector('.mcnt').textContent = vis + ' signals';
     });
-    g.style.display = vis ? '' : 'none';
-    g.querySelector('.mcnt').textContent = vis + ' signals';
-  });
-  document.getElementById('shownCount').textContent = 'Showing ' + shown + ' of ' + visibleSignals().length + ' signals in view (' + DATA.stats.totalEarly + ' total)';
+  };
+  scan('#record-table', false);
+  scan('#dead-table', true);
+  const confInView = visibleSignals().filter(r => r.cd).length;
+  document.getElementById('shownCount').textContent = 'Showing ' + shown + ' of ' + confInView + ' confirmed signals in view (' + DATA.stats.totalConfirmed + ' total confirmed)';
+  const dc = document.getElementById('deadCount');
+  if (dc) dc.textContent = shownDead + ' signals';
 }
 
 function renderAll() { renderHeadline(); renderCurrent(); renderRecordStats(); renderRecordTable(); }
@@ -425,6 +460,34 @@ function showTab(which) {
   document.getElementById('view-record').style.display = which === 'record' ? '' : 'none';
 }
 
+// Collapsible tiles (About / Awaiting): collapsed by default on first
+// visit; the user's last choice per tile persists in localStorage.
+function setAbout(open) {
+  const body = document.getElementById('about-body');
+  if (body) body.style.display = open ? '' : 'none';
+  const ch = document.getElementById('about-chev');
+  if (ch) ch.classList.toggle('open', open);
+}
+function toggleAbout() {
+  const body = document.getElementById('about-body');
+  if (!body) return;
+  const open = body.style.display === 'none';
+  setAbout(open);
+  try { localStorage.setItem('trifectaAboutOpen', open ? '1' : '0'); } catch (e) {}
+}
+let AWAIT_OPEN = false;
+try { AWAIT_OPEN = localStorage.getItem('trifectaAwaitOpen') === '1'; } catch (e) {}
+function toggleAwait() {
+  const body = document.getElementById('await-body');
+  if (!body) return;
+  AWAIT_OPEN = body.style.display === 'none';
+  body.style.display = AWAIT_OPEN ? '' : 'none';
+  const ch = document.getElementById('await-chev');
+  if (ch) ch.classList.toggle('open', AWAIT_OPEN);
+  try { localStorage.setItem('trifectaAwaitOpen', AWAIT_OPEN ? '1' : '0'); } catch (e) {}
+}
+try { if (localStorage.getItem('trifectaAboutOpen') === '1') setAbout(true); } catch (e) {}
+
 fetch('data.json').then(r => r.json()).then(d => {
   DATA = d;
   renderAll();
@@ -433,6 +496,8 @@ fetch('data.json').then(r => r.json()).then(d => {
     ' close, split/dividend adjusted. Fundamentals and market cap are point-in-time: SEC EDGAR facts as originally filed on or before each signal date ' +
     '(TTM = prior fiscal year + current YTD − prior-year same-period YTD); shares outstanding from the closest filing on or before the signal date. ' +
     'The signal log is append-only — a stock admitted at its trigger date is never removed, even if it later falls below the size floors. ' +
+    'An Early signal that never confirms within its 15-day window is <strong>closed out</strong>: it leaves the Current tab, its live figures freeze at closeout, and it moves to the separate never-confirmed list on the Track Record tab, labelled CLOSED — never confirmed. ' +
+    '<strong>All performance statistics on this page are computed over confirmed signals only</strong> (n=' + d.stats.totalConfirmed + ' of ' + d.stats.totalEarly + ' Early signals), shown from both entries — the Early trigger and the confirmation cross — because the two decision points are graded separately. Never-confirmed signals feed no statistic. ' +
     'Category: <strong>Quality</strong> = admitted as Profitable or FCF-positive; <strong>Junk</strong> = admitted via the $1B+ growth path (neither profitable nor FCF-positive). ' +
     'The <strong>REVENUE ↑ / REVENUE ↓</strong> badge shows point-in-time TTM revenue growth at the signal date (SEC filings available by then): green when revenue was still growing, red when it was shrinking, absent when it cannot be established point-in-time. Backfilled tests found revenue growth separates short-horizon (30–60 day) bounce quality — most strongly inside deep-flush names — but is not a 90-day separator, so it is shown as information, not used as an admission gate. ' +
     'Universe is US exchange-listed stocks only (NASDAQ / NYSE / NYSE American / NYSE Arca / Cboe) — no OTC. ' +
