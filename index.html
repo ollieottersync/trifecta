@@ -160,15 +160,19 @@ function visibleSignals() {
 }
 function pctStats(vals) {
   const vs = vals.filter(v => v !== null && v !== undefined);
-  if (!vs.length) return { n:0, pos:0, pctPos:null, mean:null, median:null };
+  if (!vs.length) return { n:0, pos:0, pctPos:null, mean:null, median:null, avgGain:null, avgLoss:null };
   const sorted = vs.slice().sort((a,b) => a-b);
-  const pos = vs.filter(v => v > 0).length;
+  const posV = vs.filter(v => v > 0), negV = vs.filter(v => v < 0);
+  const pos = posV.length;
   const mean = vs.reduce((a,b) => a+b, 0) / vs.length;
   const med = sorted.length % 2 ? sorted[(sorted.length-1)/2] : (sorted[sorted.length/2-1] + sorted[sorted.length/2]) / 2;
-  return { n: vs.length, pos: pos, pctPos: r1(pos / vs.length * 100), mean: r1(mean), median: r1(med) };
+  return { n: vs.length, pos: pos, pctPos: r1(pos / vs.length * 100), mean: r1(mean), median: r1(med),
+    avgGain: posV.length ? r1(posV.reduce((a,b) => a+b, 0) / posV.length) : null,
+    avgLoss: negV.length ? r1(negV.reduce((a,b) => a+b, 0) / negV.length) : null };
 }
 function groupBlock(recs) {
-  const blk = { n: recs.length, pctUpSince: pctStats(recs.map(r => r.st)).pctPos };
+  const blk = { n: recs.length, pctUpSince: pctStats(recs.map(r => r.st)).pctPos,
+    since: pctStats(recs.map(r => r.st)) };
   [30,60,90].forEach(h => { blk['h'+h] = pctStats(recs.map(r => r['r'+h])); });
   return blk;
 }
@@ -177,16 +181,21 @@ function computeStats(list) {
   const t10e = list.filter(r => r.t10 !== null && r.t10 !== undefined);
   const t10hits = t10e.filter(r => r.t10).length;
   const stAll = pctStats(list.map(r => r.st));
-  const byBucket = {}, byPath = {};
+  const byBucket = {}, byPath = {}, byCat = {};
   BUCKETS.forEach(b => { const g = list.filter(r => r.b === b); if (g.length) byBucket[b] = groupBlock(g); });
   PATHS.forEach(p => { const g = list.filter(r => r.p === p); if (g.length) byPath[p] = groupBlock(g); });
+  byCat['All'] = groupBlock(list);
+  const q = list.filter(r => r.cat === 'Quality'), j = list.filter(r => r.cat === 'Junk');
+  if (q.length) byCat['Quality'] = groupBlock(q);
+  if (j.length) byCat['Junk'] = groupBlock(j);
   return {
     totalEarly: list.length, totalConfirmed: conf.length,
     pctUpSinceTrigger: stAll.pctPos, meanSinceTrigger: stAll.mean, medianSinceTrigger: stAll.median,
+    sinceTrigger: stAll,
     h30: pctStats(list.map(r => r.r30)), h60: pctStats(list.map(r => r.r60)), h90: pctStats(list.map(r => r.r90)),
     touched10in90: { n: t10e.length, hits: t10hits, pct: t10e.length ? r1(t10hits / t10e.length * 100) : null },
     ret20Split: { confirmed: pctStats(conf.map(r => r.r20)), unconfirmed: pctStats(unc.map(r => r.r20)) },
-    byBucket: byBucket, byPath: byPath
+    byBucket: byBucket, byPath: byPath, byCat: byCat
   };
 }
 function activeStats() { return MODE === 'all' ? DATA.stats : computeStats(visibleSignals()); }
@@ -257,22 +266,38 @@ function renderHeadline() {
     '<div class="stat"><div class="v">' + fmtPlain(st.h90.pctPos) + '</div><div class="l">Positive at +90d</div></div>' +
     '<div class="stat"><div class="v">' + fmtPlain(st.touched10in90.pct) + '</div><div class="l">Touched +10% ≤ 90d</div></div>';
 }
+function fmtSigned(v) { return (v === null || v === undefined) ? '—' : (v > 0 ? '+' : '') + v.toFixed(1) + '%'; }
+function hTable(blk) {
+  const row = (lbl, s) => '<tr><td>' + lbl + '</td><td>' + fmtPlain(s.pctPos) + '</td><td class="pos">' + fmtSigned(s.avgGain) + '</td><td class="neg">' + fmtSigned(s.avgLoss) + '</td><td class="nm">' + s.n + '</td></tr>';
+  return '<table><tr><th>Horizon</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th><th>n</th></tr>' +
+    row('Since trigger', blk.since) + row('+30 days', blk.h30) + row('+60 days', blk.h60) + row('+90 days', blk.h90) + '</table>';
+}
+function groupHTable(g) {
+  let s = '<table><tr><th>Group</th><th>Horizon</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th></tr>';
+  Object.keys(g).forEach(k => {
+    const v = g[k];
+    [['Since trigger', v.since], ['+30 days', v.h30], ['+60 days', v.h60], ['+90 days', v.h90]].forEach((pair, i) => {
+      s += '<tr>' + (i === 0 ? '<td rowspan="4"><strong>' + esc(k) + '</strong><div class="nm">n=' + v.n + '</div></td>' : '') +
+        '<td>' + pair[0] + '</td><td>' + fmtPlain(pair[1].pctPos) + '</td><td class="pos">' + fmtSigned(pair[1].avgGain) + '</td><td class="neg">' + fmtSigned(pair[1].avgLoss) + '</td></tr>';
+    });
+  });
+  return s + '</table>';
+}
 function renderRecordStats() {
   const st = activeStats();
   let html = '<div class="statgrid">';
-  html += statCard('Forward returns — Early signals in view',
-    '<tr><th>Horizon</th><th>Positive</th><th>Sample</th></tr>' +
-    '<tr><td>+30 days</td><td>' + fmtPlain(st.h30.pctPos) + '</td><td class="nm">n=' + st.h30.n + ' · avg ' + fmtPlain(st.h30.mean) + ' · median ' + fmtPlain(st.h30.median) + '</td></tr>' +
-    '<tr><td>+60 days</td><td>' + fmtPlain(st.h60.pctPos) + '</td><td class="nm">n=' + st.h60.n + ' · avg ' + fmtPlain(st.h60.mean) + ' · median ' + fmtPlain(st.h60.median) + '</td></tr>' +
-    '<tr><td>+90 days</td><td>' + fmtPlain(st.h90.pctPos) + '</td><td class="nm">n=' + st.h90.n + ' · avg ' + fmtPlain(st.h90.mean) + ' · median ' + fmtPlain(st.h90.median) + '</td></tr>' +
-    '<tr><td>Touched +10% within 90d</td><td>' + fmtPlain(st.touched10in90.pct) + '</td><td class="nm">n=' + st.touched10in90.n + ' (intraday high)</td></tr>');
+  html += '<div class="card"><h2>Forward returns — signals in view (winners vs losers)</h2>' +
+    hTable({ since: st.sinceTrigger, h30: st.h30, h60: st.h60, h90: st.h90 }) +
+    '<p style="margin-bottom:0" class="nm">Touched +10% within 90 days: <strong style="color:var(--txt)">' + fmtPlain(st.touched10in90.pct) + '</strong> (n=' + st.touched10in90.n + ', intraday high)</p></div>';
   html += statCard('Does confirmation help? (return at ~20 trading days, from Early entry)',
-    '<tr><th>Subset</th><th>Positive</th><th>Sample</th></tr>' +
-    '<tr><td>Confirmed</td><td>' + fmtPlain(st.ret20Split.confirmed.pctPos) + '</td><td class="nm">n=' + st.ret20Split.confirmed.n + ' · avg ' + fmtPlain(st.ret20Split.confirmed.mean) + '</td></tr>' +
-    '<tr><td>Never confirmed</td><td>' + fmtPlain(st.ret20Split.unconfirmed.pctPos) + '</td><td class="nm">n=' + st.ret20Split.unconfirmed.n + ' · avg ' + fmtPlain(st.ret20Split.unconfirmed.mean) + '</td></tr>');
+    '<tr><th>Subset</th><th>% Positive</th><th>Avg gain</th><th>Avg loss</th><th>n</th></tr>' +
+    '<tr><td>Confirmed</td><td>' + fmtPlain(st.ret20Split.confirmed.pctPos) + '</td><td class="pos">' + fmtSigned(st.ret20Split.confirmed.avgGain) + '</td><td class="neg">' + fmtSigned(st.ret20Split.confirmed.avgLoss) + '</td><td class="nm">' + st.ret20Split.confirmed.n + '</td></tr>' +
+    '<tr><td>Never confirmed</td><td>' + fmtPlain(st.ret20Split.unconfirmed.pctPos) + '</td><td class="pos">' + fmtSigned(st.ret20Split.unconfirmed.avgGain) + '</td><td class="neg">' + fmtSigned(st.ret20Split.unconfirmed.avgLoss) + '</td><td class="nm">' + st.ret20Split.unconfirmed.n + '</td></tr>');
   html += '</div><div class="statgrid" style="margin-top:16px">';
-  html += statCard('By market-cap bucket', groupRows(st.byBucket));
-  html += statCard('By admission path — the quality split', groupRows(st.byPath));
+  html += '<div class="card"><h2>By category — All / Quality / Junk</h2>' + groupHTable(st.byCat) + '</div>';
+  html += '<div class="card"><h2>By admission path — the quality split</h2>' + groupHTable(st.byPath) + '</div>';
+  html += '</div><div class="statgrid" style="margin-top:16px">';
+  html += statCard('By market-cap bucket (% positive)', groupRows(st.byBucket));
   html += '</div>';
   document.getElementById('record-stats').innerHTML = html;
 }
