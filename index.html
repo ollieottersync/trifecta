@@ -68,6 +68,7 @@
   .controls { display:flex; gap:10px; flex-wrap:wrap; margin:14px 0 4px; }
   .controls input, .controls select { background:var(--card); border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:9px 12px; font-size:.95rem; }
   .controls input { flex:1; min-width:200px; }
+  .sortsel { background:var(--card); border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:8px 10px; font-size:.92rem; max-width:100%; }
   .shown { color:var(--dim); font-size:.85rem; margin:8px 0 0; }
   .statgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
   .statgrid .card { margin:0; }
@@ -121,6 +122,14 @@
         <button data-mode="quality" onclick="setMode('quality')">Quality only</button>
       </span>
       <span class="shown" id="curCount"></span>
+      <span style="flex:1"></span>
+      <span class="lbl">Sort:</span>
+      <select id="sort-current" class="sortsel" onchange="setSort(this.value)">
+        <option value="date">Trigger date (newest first)</option>
+        <option value="cap">Market cap (highest first)</option>
+        <option value="px">Stock price (highest first)</option>
+        <option value="az">A–Z (ticker)</option>
+      </select>
     </div>
     <div id="current-body"><div class="loading">Loading signals…</div></div>
   </div>
@@ -142,6 +151,12 @@
         <option value="Mid">Mid ($2B–$10B)</option>
         <option value="Small">Small ($500M–$2B)</option>
       </select>
+      <select id="sort-record" class="sortsel" onchange="setSort(this.value)">
+        <option value="date">Trigger date (newest first)</option>
+        <option value="cap">Market cap (highest first)</option>
+        <option value="px">Stock price (highest first)</option>
+        <option value="az">A–Z (ticker)</option>
+      </select>
     </div>
     <div class="shown" id="shownCount"></div>
     <div id="record-table"></div>
@@ -157,6 +172,23 @@ const BUCKETS = ['Large','Mid','Small'];
 const PATHS = ['Profitable','FCF-positive','Growth $1B+'];
 let DATA = null;
 let MODE = 'all'; // 'all' = Quality + Junk, 'quality' = Quality only
+let SORT = 'date'; // 'date' | 'cap' | 'px' | 'az' — shared across both tabs
+
+function sortSignals(list) {
+  const arr = list.slice();
+  if (SORT === 'cap') arr.sort((a,b) => (b.cap || 0) - (a.cap || 0) || a.t.localeCompare(b.t));
+  else if (SORT === 'px') arr.sort((a,b) => (b.px || 0) - (a.px || 0) || a.t.localeCompare(b.t));
+  else if (SORT === 'az') arr.sort((a,b) => a.t.localeCompare(b.t) || b.d.localeCompare(a.d));
+  else arr.sort((a,b) => b.d.localeCompare(a.d) || a.t.localeCompare(b.t));
+  return arr;
+}
+function setSort(v) {
+  SORT = v;
+  const sc = document.getElementById('sort-current'); if (sc) sc.value = v;
+  const sr = document.getElementById('sort-record'); if (sr) sr.value = v;
+  renderCurrent();
+  renderRecordTable();
+}
 
 function r1(v) { return Math.round(v * 10) / 10; }
 function fmtPct(v) {
@@ -244,7 +276,7 @@ function currentTable(rows) {
 }
 
 function renderCurrent() {
-  const sigs = visibleSignals().sort((a,b) => b.d.localeCompare(a.d));
+  const sigs = sortSignals(visibleSignals());
   document.getElementById('curCount').textContent = 'Showing ' + sigs.length + ' of ' + DATA.stats.totalEarly + ' signals' + (MODE === 'quality' ? ' — junk category hidden' : '');
   let html = '';
   const awaiting = sigs.filter(r => r.d >= '2026-10-08' && !r.cd);
@@ -337,7 +369,7 @@ function recordRow(r) {
     '<td>' + catCell(r) + '</td><td>' + statusCell(r) + '</td></tr>';
 }
 function renderRecordTable() {
-  const sigs = visibleSignals().sort((a,b) => b.d.localeCompare(a.d));
+  const sigs = sortSignals(visibleSignals());
   const months = {};
   sigs.forEach(r => { const k = r.d.slice(0,7); (months[k] = months[k] || []).push(r); });
   let html = '';
