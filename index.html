@@ -267,6 +267,9 @@ function computeStats(list) {
   const q = list.filter(r => r.cat === 'Quality'), j = list.filter(r => r.cat === 'Junk');
   if (q.length) byCat['Quality'] = groupBlock(q);
   if (j.length) byCat['Junk'] = groupBlock(j);
+  const byBadge = {};
+  const badgeSets = [['EXHAUSTION ★', ['B']], ['CAPITULATION', ['C', 'B']], ['WASHOUT', ['A', 'C', 'B']], ['No badge', [null]]];
+  badgeSets.forEach(([k, codes]) => { const g = list.filter(r => codes.includes(r.tier === undefined ? null : r.tier)); if (g.length) byBadge[k] = groupBlock(g); });
   return {
     totalEarly: list.length, totalConfirmed: conf.length,
     pctUpSinceTrigger: stAll.pctPos, meanSinceTrigger: stAll.mean, medianSinceTrigger: stAll.median,
@@ -276,7 +279,7 @@ function computeStats(list) {
     c30: pctStats(list.map(r => r.c30)), c60: pctStats(list.map(r => r.c60)), c90: pctStats(list.map(r => r.c90)),
     ret20: pctStats(list.map(r => r.r20)),
     touched10in90: { n: t10e.length, hits: t10hits, pct: t10e.length ? r1(t10hits / t10e.length * 100) : null },
-    byBucket: byBucket, byPath: byPath, byCat: byCat
+    byBucket: byBucket, byPath: byPath, byCat: byCat, byBadge: byBadge
   };
 }
 // Stats population is CONFIRMED SIGNALS ONLY (both tabs' figures); the
@@ -420,6 +423,9 @@ function renderRecordStats() {
   html += '</div><div class="statgrid" style="margin-top:16px">';
   html += '<div class="card"><h2>By category — All / Quality / Junk · confirmed only</h2>' + groupHTable(st.byCat) + '</div>';
   html += '<div class="card"><h2>By admission path — the quality split · confirmed only</h2>' + groupHTable(st.byPath) + '</div>';
+  html += '</div><div class="statgrid" style="margin-top:16px">';
+  html += '<div class="card"><h2>By bottom-evidence badge — Washout / Capitulation / Exhaustion · confirmed only</h2>' + groupHTable(st.byBadge) +
+    '<p class="nm" style="margin-bottom:0">Nested sets — every Exhaustion name is also counted in Capitulation and Washout. Badges are set point-in-time at the Early trigger; Junk names earn none.</p></div>';
   html += '</div><div class="statgrid" style="margin-top:16px">';
   html += statCard('By market-cap bucket (% positive) · confirmed only', groupRows(st.byBucket));
   html += '</div>';
