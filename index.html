@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trifecta — RSI · MACD · Stochastic Confluence Screener</title>
+<meta name="description" content="Trifecta flags stocks where RSI, MACD and fast stochastic bottom together — and publishes its full track record.">
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:#0d1117; color:#e6edf3; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 20px 64px; }
+  h1 { font-size: 2.4rem; margin: 0 0 4px; letter-spacing: .5px; }
+  h1 .tri { color:#f0b90b; }
+  .sub { color:#9aa7b4; font-size: 1.05rem; margin-bottom: 28px; }
+  .card { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:20px 24px; margin:18px 0; }
+  .card h2 { margin:0 0 10px; font-size:1.15rem; color:#f0b90b; }
+  .card p, .card li { color:#c9d4e0; line-height:1.55; }
+  .status { border-color:#f0b90b; }
+  .status strong { color:#f0b90b; }
+  ul { margin:8px 0 8px 18px; padding:0; }
+  .foot { color:#6e7b8a; font-size:.85rem; margin-top:32px; line-height:1.6; }
+  code { background:#0d1117; border:1px solid #30363d; border-radius:6px; padding:1px 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="tri">▲</span> TRIFECTA</h1>
+  <div class="sub">Three oversold signals. One trigger. A public track record.</div>
+
+  <div class="card status">
+    <h2>Status</h2>
+    <p><strong>The six-month backfill is running now.</strong> When it completes, this page will show every
+    Trifecta signal since April 2026 — graded by what the stock actually did afterward — plus new signals as they trigger.
+    No cherry-picking: signals are never removed, even when a stock later falls below the size thresholds.</p>
+  </div>
+
+  <div class="card">
+    <h2>The screen</h2>
+    <p>An <strong>Early (bottoming)</strong> signal fires when, within a 7-day cluster:</p>
+    <ul>
+      <li><strong>RSI(14)</strong> is at or below <strong>35</strong></li>
+      <li><strong>Fast stochastic (5,3)</strong> crosses up out of oversold — %K and %D both under 20</li>
+      <li><strong>MACD (12,26,9)</strong> histogram bottoms and rises for two straight days</li>
+    </ul>
+    <p>It becomes <strong>Confirmed</strong> if the MACD line crosses above its signal line within
+    <strong>15 calendar days</strong>, with RSI still under 55.</p>
+  </div>
+
+  <div class="card">
+    <h2>The quality filter</h2>
+    <ul>
+      <li>US <strong>exchange-listed</strong> stocks only (NYSE / NASDAQ) — no OTC</li>
+      <li>Profitable <em>or</em> free-cash-flow positive: market cap ≥ <strong>$500M</strong></li>
+      <li>Neither profitable nor FCF-positive: market cap ≥ <strong>$1B</strong></li>
+      <li>Price ≥ $5 and 20-day average volume ≥ 500k shares</li>
+      <li>Market cap and fundamentals are judged on the data available <strong>at the signal date</strong>
+      (SEC filings as originally reported) — never on today's numbers</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>How the record is graded</h2>
+    <p>Every signal is followed forward: returns at +5, +10, +20 and +60 trading days from both the
+    Early and Confirmed entries, best run-up and worst drawdown inside 20 sessions, performance versus the S&amp;P 500,
+    and the headline number — <strong>the share of signals up since triggering</strong>.</p>
+  </div>
+
+  <p class="foot">Methodology notes: prices are split/dividend adjusted. Historical classifications use the closest
+  point-in-time data available (SEC EDGAR as-filed facts). The universe is today's exchange listings, so stocks delisted
+  before today do not appear — a known survivorship limitation. This site is an educational screening tool, not investment advice.</p>
+</div>
+</body>
+</html>
