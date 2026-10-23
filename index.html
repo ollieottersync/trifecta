@@ -6,20 +6,56 @@
 <title>Trifecta — RSI · MACD · Stochastic Confluence Screener</title>
 <meta name="description" content="Trifecta flags stocks where RSI, MACD and fast stochastic bottom together — and publishes its full track record.">
 <style>
-  :root { color-scheme: dark; }
-  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:#0d1117; color:#e6edf3; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 20px 64px; }
-  h1 { font-size: 2.4rem; margin: 0 0 4px; letter-spacing: .5px; }
-  h1 .tri { color:#f0b90b; }
-  .sub { color:#9aa7b4; font-size: 1.05rem; margin-bottom: 28px; }
-  .card { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:20px 24px; margin:18px 0; }
-  .card h2 { margin:0 0 10px; font-size:1.15rem; color:#f0b90b; }
+  :root { color-scheme: dark; --bg:#0d1117; --card:#161b22; --line:#30363d; --txt:#e6edf3; --mut:#9aa7b4; --dim:#6e7b8a; --acc:#f0b90b; --grn:#3fb950; --red:#f85149; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:var(--bg); color:var(--txt); }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 40px 18px 64px; }
+  h1 { font-size: 2.3rem; margin: 0 0 4px; letter-spacing: .5px; }
+  h1 .tri { color: var(--acc); }
+  .sub { color: var(--mut); font-size: 1.05rem; margin-bottom: 24px; }
+  .card { background: var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 22px; margin:16px 0; }
+  .card h2 { margin:0 0 10px; font-size:1.12rem; color:var(--acc); }
   .card p, .card li { color:#c9d4e0; line-height:1.55; }
-  .status { border-color:#f0b90b; }
-  .status strong { color:#f0b90b; }
   ul { margin:8px 0 8px 18px; padding:0; }
-  .foot { color:#6e7b8a; font-size:.85rem; margin-top:32px; line-height:1.6; }
-  code { background:#0d1117; border:1px solid #30363d; border-radius:6px; padding:1px 6px; }
+  .stats-strip { display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 6px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 16px; min-width:128px; flex:1; }
+  .stat .v { font-size:1.45rem; font-weight:700; }
+  .stat .l { color:var(--mut); font-size:.78rem; text-transform:uppercase; letter-spacing:.4px; margin-top:2px; }
+  .tabs { display:flex; gap:8px; margin:26px 0 6px; border-bottom:1px solid var(--line); }
+  .tab { background:none; border:none; color:var(--mut); font-size:1.05rem; font-weight:600; padding:10px 18px; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1px; }
+  .tab.active { color:var(--txt); border-bottom-color:var(--acc); }
+  .tab:hover { color:var(--txt); }
+  table { width:100%; border-collapse:collapse; font-size:.92rem; }
+  th { text-align:left; color:var(--mut); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--line); }
+  td { padding:7px 10px; border-bottom:1px solid #21262d; vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  .tk { font-weight:700; font-size:1rem; }
+  .nm { color:var(--dim); font-size:.8rem; font-weight:400; }
+  .pos { color:var(--grn); font-weight:600; }
+  .neg { color:var(--red); font-weight:600; }
+  .flat { color:var(--mut); }
+  .badge { display:inline-block; font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:20px; letter-spacing:.3px; }
+  .badge.conf { background:rgba(63,185,80,.15); color:var(--grn); border:1px solid rgba(63,185,80,.5); }
+  .badge.early { background:rgba(240,185,11,.12); color:var(--acc); border:1px solid rgba(240,185,11,.5); }
+  .chip { display:inline-block; font-size:.72rem; padding:2px 8px; border-radius:6px; background:#0d1117; border:1px solid var(--line); color:var(--mut); }
+  .group-h { display:flex; align-items:baseline; gap:10px; margin:26px 0 4px; }
+  .group-h h3 { margin:0; font-size:1.05rem; }
+  .group-h .cnt { color:var(--dim); font-size:.85rem; }
+  details.month { margin-top:14px; }
+  details.month summary { cursor:pointer; font-size:1.02rem; font-weight:600; padding:10px 4px; color:var(--txt); }
+  details.month summary .cnt { color:var(--dim); font-weight:400; font-size:.85rem; margin-left:8px; }
+  .await { border-color:var(--acc); }
+  .await h2 { color:var(--acc); }
+  .controls { display:flex; gap:10px; flex-wrap:wrap; margin:14px 0 4px; }
+  .controls input, .controls select { background:var(--card); border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:9px 12px; font-size:.95rem; }
+  .controls input { flex:1; min-width:200px; }
+  .shown { color:var(--dim); font-size:.85rem; margin:8px 0 0; }
+  .statgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+  .statgrid .card { margin:0; }
+  .foot { color:var(--dim); font-size:.85rem; margin-top:36px; line-height:1.65; }
+  code { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:1px 6px; }
+  .loading { color:var(--mut); padding:30px 0; }
+  @media (max-width:640px){ .hidem { display:none; } h1{font-size:1.8rem;} }
 </style>
 </head>
 <body>
@@ -27,47 +63,213 @@
   <h1><span class="tri">▲</span> TRIFECTA</h1>
   <div class="sub">Three oversold signals. One trigger. A public track record.</div>
 
-  <div class="card status">
-    <h2>Status</h2>
-    <p><strong>The six-month backfill is running now.</strong> When it completes, this page will show every
-    Trifecta signal since April 2026 — graded by what the stock actually did afterward — plus new signals as they trigger.
-    No cherry-picking: signals are never removed, even when a stock later falls below the size thresholds.</p>
-  </div>
-
   <div class="card">
     <h2>The screen</h2>
-    <p>An <strong>Early (bottoming)</strong> signal fires when, within a 7-day cluster:</p>
-    <ul>
-      <li><strong>RSI(14)</strong> is at or below <strong>35</strong></li>
-      <li><strong>Fast stochastic (5,3)</strong> crosses up out of oversold — %K and %D both under 20</li>
-      <li><strong>MACD (12,26,9)</strong> histogram bottoms and rises for two straight days</li>
-    </ul>
-    <p>It becomes <strong>Confirmed</strong> if the MACD line crosses above its signal line within
+    <p>An <strong>Early (bottoming)</strong> signal fires when, within a 7-day cluster:
+    <strong>RSI(14)</strong> is at or below <strong>35</strong>, the <strong>fast stochastic (5,3)</strong> crosses up
+    out of oversold (%K and %D both under 20), and the <strong>MACD (12,26,9)</strong> histogram bottoms and rises
+    two straight days. It becomes <strong>Confirmed</strong> if the MACD line crosses above its signal line within
     <strong>15 calendar days</strong>, with RSI still under 55.</p>
+    <p style="margin-bottom:0">A quality filter keeps junk out: US <strong>exchange-listed</strong> stocks only (no OTC);
+    profitable <em>or</em> free-cash-flow positive names need market cap ≥ <strong>$500M</strong>, names that are neither need
+    ≥ <strong>$1B</strong>; price ≥ $5 and 20-day average volume ≥ 500k shares. Market cap and fundamentals are judged on the
+    SEC filings available <strong>at the signal date</strong> — never on today's numbers.</p>
   </div>
 
-  <div class="card">
-    <h2>The quality filter</h2>
-    <ul>
-      <li>US <strong>exchange-listed</strong> stocks only (NYSE / NASDAQ) — no OTC</li>
-      <li>Profitable <em>or</em> free-cash-flow positive: market cap ≥ <strong>$500M</strong></li>
-      <li>Neither profitable nor FCF-positive: market cap ≥ <strong>$1B</strong></li>
-      <li>Price ≥ $5 and 20-day average volume ≥ 500k shares</li>
-      <li>Market cap and fundamentals are judged on the data available <strong>at the signal date</strong>
-      (SEC filings as originally reported) — never on today's numbers</li>
-    </ul>
+  <div class="stats-strip" id="headline"></div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-current" onclick="showTab('current')">Current</button>
+    <button class="tab" id="tab-record" onclick="showTab('record')">Track Record</button>
   </div>
 
-  <div class="card">
-    <h2>How the record is graded</h2>
-    <p>Every signal is followed forward: returns at +5, +10, +20 and +60 trading days from both the
-    Early and Confirmed entries, best run-up and worst drawdown inside 20 sessions, performance versus the S&amp;P 500,
-    and the headline number — <strong>the share of signals up since triggering</strong>.</p>
+  <div id="view-current"><div class="loading">Loading signals…</div></div>
+
+  <div id="view-record" style="display:none">
+    <div id="record-stats"></div>
+    <div class="controls">
+      <input type="text" id="q" placeholder="Search ticker or company name…" oninput="applyFilter()">
+      <select id="bucketSel" onchange="applyFilter()">
+        <option value="">All cap buckets</option>
+        <option value="Large">Large (≥ $10B)</option>
+        <option value="Mid">Mid ($2B–$10B)</option>
+        <option value="Small">Small ($500M–$2B)</option>
+      </select>
+    </div>
+    <div class="shown" id="shownCount"></div>
+    <div id="record-table"></div>
   </div>
 
-  <p class="foot">Methodology notes: prices are split/dividend adjusted. Historical classifications use the closest
-  point-in-time data available (SEC EDGAR as-filed facts). The universe is today's exchange listings, so stocks delisted
-  before today do not appear — a known survivorship limitation. This site is an educational screening tool, not investment advice.</p>
+  <p class="foot" id="methodology"></p>
 </div>
+
+<script>
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MON3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let DATA = null;
+
+function fmtPct(v) {
+  if (v === null || v === undefined) return '<span class="flat">—</span>';
+  const cls = v > 0 ? 'pos' : (v < 0 ? 'neg' : 'flat');
+  const s = (v > 0 ? '+' : '') + v.toFixed(1) + '%';
+  return '<span class="' + cls + '">' + s + '</span>';
+}
+function fmtPlain(v) { return (v === null || v === undefined) ? '—' : v.toFixed(1) + '%'; }
+function parseD(s) { const p = s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+function fmtDate(s) { const d = parseD(s); return MON3[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear(); }
+function mondayOf(s) { const d = parseD(s); const dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow); return d; }
+function isoDay(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+function statusCell(r) {
+  if (r.cd) return '<span class="badge conf">Confirmed</span> <span class="nm">' + fmtDate(r.cd) + ' · ' + fmtPct(r.sc) + ' since</span>';
+  return '<span class="badge early">Early</span>';
+}
+function currentRow(r) {
+  return '<tr><td><span class="tk">' + esc(r.t) + '</span> <span class="nm">' + esc(r.name || '') + '</span></td>' +
+    '<td>' + fmtDate(r.d) + '</td><td>' + fmtPct(r.st) + '</td><td>' + statusCell(r) + '</td>' +
+    '<td><span class="chip">' + r.b + '</span></td><td class="hidem">' + esc(r.p) + '</td></tr>';
+}
+function currentTable(rows) {
+  return '<table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>Status</th><th>Cap</th><th class="hidem">Admission</th></tr></thead><tbody>' +
+    rows.map(currentRow).join('') + '</tbody></table>';
+}
+
+function renderCurrent() {
+  const sigs = DATA.signals.slice().sort((a,b) => b.d.localeCompare(a.d));
+  let html = '';
+  const awaiting = sigs.filter(r => r.d >= '2026-10-08' && !r.cd);
+  if (awaiting.length) {
+    html += '<div class="card await"><h2>⏳ Awaiting confirmation (' + awaiting.length + ')</h2>' +
+      '<p style="margin-top:0">Early signals from the last 15 days still inside their MACD confirmation window.</p>' +
+      currentTable(awaiting) + '</div>';
+  }
+  // Current month grouped by week (newest week first)
+  const curMonth = DATA.asOf.slice(0,7);
+  const curSigs = sigs.filter(r => r.d.slice(0,7) === curMonth);
+  const weeks = {};
+  curSigs.forEach(r => { const k = isoDay(mondayOf(r.d)); (weeks[k] = weeks[k] || []).push(r); });
+  Object.keys(weeks).sort().reverse().forEach(k => {
+    const md = parseD(k);
+    html += '<div class="group-h"><h3>Week of ' + MON3[md.getMonth()] + ' ' + md.getDate() + '</h3><span class="cnt">' + weeks[k].length + ' signals</span></div>' + currentTable(weeks[k]);
+  });
+  // Rest of the period grouped by month
+  const months = {};
+  sigs.filter(r => r.d.slice(0,7) !== curMonth).forEach(r => { const k = r.d.slice(0,7); (months[k] = months[k] || []).push(r); });
+  Object.keys(months).sort().reverse().forEach(k => {
+    const p = k.split('-');
+    html += '<details class="month"><summary>' + MONTHS[+p[1]-1] + ' ' + p[0] + '<span class="cnt">' + months[k].length + ' signals</span></summary>' + currentTable(months[k]) + '</details>';
+  });
+  document.getElementById('view-current').innerHTML = html;
+}
+
+function statCard(title, rowsHtml) {
+  return '<div class="card"><h2>' + title + '</h2><table>' + rowsHtml + '</table></div>';
+}
+function horizonRows(h) {
+  return '<tr><td>+30 days</td><td>' + fmtPlain(h.h30.pctPos) + ' positive</td><td class="nm">n=' + h.h30.n + ' · avg ' + fmtPlain(h.h30.mean) + '</td></tr>' +
+         '<tr><td>+60 days</td><td>' + fmtPlain(h.h60.pctPos) + ' positive</td><td class="nm">n=' + h.h60.n + ' · avg ' + fmtPlain(h.h60.mean) + '</td></tr>' +
+         '<tr><td>+90 days</td><td>' + fmtPlain(h.h90.pctPos) + ' positive</td><td class="nm">n=' + h.h90.n + ' · avg ' + fmtPlain(h.h90.mean) + '</td></tr>';
+}
+function groupRows(g) {
+  let s = '';
+  Object.keys(g).forEach(k => {
+    const v = g[k];
+    s += '<tr><td>' + esc(k) + '</td><td>' + v.n + '</td><td>' + fmtPlain(v.pctUpSince) + '</td><td>' + fmtPlain(v.h30.pctPos) + '</td><td>' + fmtPlain(v.h60.pctPos) + '</td><td>' + fmtPlain(v.h90.pctPos) + '</td></tr>';
+  });
+  return '<tr><th>Group</th><th>Signals</th><th>Up since</th><th>+30d</th><th>+60d</th><th>+90d</th></tr>' + s;
+}
+
+function renderRecordStats() {
+  const st = DATA.stats;
+  let html = '<div class="statgrid">';
+  html += statCard('Forward returns — all Early signals',
+    '<tr><th>Horizon</th><th>Positive</th><th>Sample</th></tr>' +
+    '<tr><td>+30 days</td><td>' + fmtPlain(st.h30.pctPos) + '</td><td class="nm">n=' + st.h30.n + ' · avg ' + fmtPlain(st.h30.mean) + ' · median ' + fmtPlain(st.h30.median) + '</td></tr>' +
+    '<tr><td>+60 days</td><td>' + fmtPlain(st.h60.pctPos) + '</td><td class="nm">n=' + st.h60.n + ' · avg ' + fmtPlain(st.h60.mean) + ' · median ' + fmtPlain(st.h60.median) + '</td></tr>' +
+    '<tr><td>+90 days</td><td>' + fmtPlain(st.h90.pctPos) + '</td><td class="nm">n=' + st.h90.n + ' · avg ' + fmtPlain(st.h90.mean) + ' · median ' + fmtPlain(st.h90.median) + '</td></tr>' +
+    '<tr><td>Touched +10% within 90d</td><td>' + fmtPlain(st.touched10in90.pct) + '</td><td class="nm">n=' + st.touched10in90.n + ' (intraday high)</td></tr>');
+  html += statCard('Does confirmation help? (return at ~20 trading days, from Early entry)',
+    '<tr><th>Subset</th><th>Positive</th><th>Sample</th></tr>' +
+    '<tr><td>Confirmed</td><td>' + fmtPlain(st.ret20Split.confirmed.pctPos) + '</td><td class="nm">n=' + st.ret20Split.confirmed.n + ' · avg ' + fmtPlain(st.ret20Split.confirmed.mean) + '</td></tr>' +
+    '<tr><td>Never confirmed</td><td>' + fmtPlain(st.ret20Split.unconfirmed.pctPos) + '</td><td class="nm">n=' + st.ret20Split.unconfirmed.n + ' · avg ' + fmtPlain(st.ret20Split.unconfirmed.mean) + '</td></tr>');
+  html += '</div><div class="statgrid" style="margin-top:16px">';
+  html += statCard('By market-cap bucket', groupRows(st.byBucket));
+  html += statCard('By admission path', groupRows(st.byPath));
+  html += '</div>';
+  document.getElementById('record-stats').innerHTML = html;
+}
+
+function recordRow(r) {
+  return '<tr class="srow" data-tk="' + esc(r.t.toLowerCase()) + '" data-nm="' + esc((r.name||'').toLowerCase()) + '" data-b="' + r.b + '">' +
+    '<td><span class="tk">' + esc(r.t) + '</span></td><td>' + fmtDate(r.d) + '</td><td>' + fmtPct(r.st) + '</td>' +
+    '<td>' + fmtPct(r.r30) + '</td><td>' + fmtPct(r.r60) + '</td><td>' + fmtPct(r.r90) + '</td><td>' + statusCell(r) + '</td></tr>';
+}
+function renderRecordTable() {
+  const sigs = DATA.signals.slice().sort((a,b) => b.d.localeCompare(a.d));
+  const months = {};
+  sigs.forEach(r => { const k = r.d.slice(0,7); (months[k] = months[k] || []).push(r); });
+  let html = '';
+  Object.keys(months).sort().reverse().forEach(k => {
+    const p = k.split('-');
+    html += '<div class="mgroup" data-month="' + k + '"><div class="group-h"><h3>' + MONTHS[+p[1]-1] + ' ' + p[0] + '</h3><span class="cnt mcnt">' + months[k].length + ' signals</span></div>' +
+      '<table><thead><tr><th>Ticker</th><th>Trigger date</th><th>Since trigger</th><th>+30d</th><th>+60d</th><th>+90d</th><th>Status</th></tr></thead><tbody>' +
+      months[k].map(recordRow).join('') + '</tbody></table></div>';
+  });
+  document.getElementById('record-table').innerHTML = html;
+  applyFilter();
+}
+function applyFilter() {
+  if (!DATA) return;
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const b = document.getElementById('bucketSel').value;
+  let shown = 0;
+  document.querySelectorAll('#record-table .mgroup').forEach(g => {
+    let vis = 0;
+    g.querySelectorAll('.srow').forEach(row => {
+      const ok = (!q || row.dataset.tk.includes(q) || row.dataset.nm.includes(q)) && (!b || row.dataset.b === b);
+      row.style.display = ok ? '' : 'none';
+      if (ok) { vis++; shown++; }
+    });
+    g.style.display = vis ? '' : 'none';
+    g.querySelector('.mcnt').textContent = vis + ' signals';
+  });
+  document.getElementById('shownCount').textContent = 'Showing ' + shown + ' of ' + DATA.stats.totalEarly + ' signals';
+}
+
+function showTab(which) {
+  document.getElementById('tab-current').classList.toggle('active', which === 'current');
+  document.getElementById('tab-record').classList.toggle('active', which === 'record');
+  document.getElementById('view-current').style.display = which === 'current' ? '' : 'none';
+  document.getElementById('view-record').style.display = which === 'record' ? '' : 'none';
+}
+
+fetch('data.json').then(r => r.json()).then(d => {
+  DATA = d;
+  const st = d.stats;
+  document.getElementById('headline').innerHTML =
+    '<div class="stat"><div class="v">' + st.totalEarly.toLocaleString() + '</div><div class="l">Early signals</div></div>' +
+    '<div class="stat"><div class="v">' + st.totalConfirmed.toLocaleString() + '</div><div class="l">Confirmed</div></div>' +
+    '<div class="stat"><div class="v">' + fmtPlain(st.pctUpSinceTrigger) + '</div><div class="l">Up since trigger</div></div>' +
+    '<div class="stat"><div class="v">' + fmtPlain(st.h30.pctPos) + '</div><div class="l">Positive at +30d</div></div>' +
+    '<div class="stat"><div class="v">' + fmtPlain(st.h60.pctPos) + '</div><div class="l">Positive at +60d</div></div>' +
+    '<div class="stat"><div class="v">' + fmtPlain(st.h90.pctPos) + '</div><div class="l">Positive at +90d</div></div>' +
+    '<div class="stat"><div class="v">' + fmtPlain(st.touched10in90.pct) + '</div><div class="l">Touched +10% ≤ 90d</div></div>';
+  renderCurrent();
+  renderRecordStats();
+  renderRecordTable();
+  document.getElementById('methodology').innerHTML =
+    'Methodology: backfill of ' + d.windowStart + ' to ' + d.windowEnd + '; performance measured to the ' + d.asOf +
+    ' close, split/dividend adjusted. Fundamentals and market cap are point-in-time: SEC EDGAR facts as originally filed on or before each signal date ' +
+    '(TTM = prior fiscal year + current YTD − prior-year same-period YTD); shares outstanding from the closest filing on or before the signal date. ' +
+    'The signal log is append-only — a stock admitted at its trigger date is never removed, even if it later falls below the size floors. ' +
+    'Universe is US exchange-listed stocks only (NASDAQ / NYSE / NYSE American / NYSE Arca / Cboe) — no OTC. ' +
+    'Survivorship caveat: the universe is built from current listings, so companies delisted before the backfill do not appear. ' +
+    'The +30/+60/+90-day columns count only signals whose full horizon had elapsed by ' + d.asOf + '; younger signals show —. ' +
+    'This site is an educational screening tool, not investment advice.';
+}).catch(e => {
+  document.getElementById('view-current').innerHTML = '<div class="loading">Could not load data.json.</div>';
+});
+</script>
 </body>
 </html>
