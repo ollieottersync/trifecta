@@ -119,6 +119,15 @@
     price ≥ $5 and 20-day average volume ≥ 500k shares. Market cap and fundamentals are judged on the SEC filings
     available <strong>at the signal date</strong> — never on today's numbers. Use the category toggle on either tab to
     see what the junk filter is worth: every figure on the page recomputes for the visible set.</p>
+    <p style="margin-bottom:0">Quality signals can also earn a <strong>bottom-evidence badge</strong>, graded at the trigger.
+    Each badge adds one more kind of evidence that the selling is done: <strong>WASHOUT</strong> — the stock closed below its
+    <strong>200-week average</strong>, a long-cycle washout in a fundamentally sound name. <strong>CAPITULATION</strong> — the washout,
+    plus a seller climax: <strong>RSI divergence</strong> or a <strong>≥1.5× surge in trading volume</strong>. <strong>★ EXHAUSTION</strong> —
+    the washout, plus <strong>RSI bullish divergence</strong> specifically: price ground out a lower low while momentum refused to
+    follow, the measurable signature of sellers running out. In the 2026 backfill the ladder separated cleanly — Washout names
+    finished positive 72% of the time (mean +13%), Capitulation 76% (+20%), Exhaustion 84% (+24%), against 60% (+5%) for
+    confirmed signals overall. The badges rank what deserves a closer look first; they never admit or exclude a stock,
+    and Junk names earn none.</p>
     </div>
   </div>
 
@@ -298,11 +307,11 @@ function revBadge(r) {
 function tierBadge(r) {
   if (!r.tier) return '';
   const w = (r.w2 === null || r.w2 === undefined) ? '' : '<span class="revsub">' + (r.w2 > 0 ? '+' : '') + r.w2.toFixed(0) + '% vs 200wk</span>';
-  const labels = { B: 'TIER B ★ TOP', C: 'TIER C — SELECT', A: 'TIER A' };
+  const labels = { B: '★ EXHAUSTION', C: 'CAPITULATION', A: 'WASHOUT' };
   const tips = {
-    B: 'Tier B: Quality, closed below its 200-week average at the trigger, with RSI bullish divergence. 2026 backfill: 84% positive since trigger, mean +24%.',
-    C: 'Tier C: Quality, closed below its 200-week average at the trigger, with RSI divergence or >=1.5x volume expansion. 2026 backfill: 76% positive since trigger, mean +20%.',
-    A: 'Tier A: Quality, closed below its 200-week average at the trigger. 2026 backfill: 72% positive since trigger, mean +13%.'
+    B: 'EXHAUSTION (top tier): Quality, closed below its 200-week average at the trigger, with RSI bullish divergence — price made a lower low but momentum refused to follow. The selling is measurably running out. 2026 backfill: 84% positive since trigger, mean +24%.',
+    C: 'CAPITULATION: Quality, closed below its 200-week average at the trigger, with a seller climax — RSI divergence or >=1.5x volume expansion. 2026 backfill: 76% positive since trigger, mean +20%.',
+    A: 'WASHOUT: Quality, closed below its 200-week average at the trigger — a long-cycle washout in a fundamentally sound name. 2026 backfill: 72% positive since trigger, mean +13%.'
   };
   return '<div><span class="tierchip ' + r.tier.toLowerCase() + '" title="' + tips[r.tier] + '">' + labels[r.tier] + '</span>' + w + '</div>';
 }
@@ -536,7 +545,7 @@ fetch('data.json').then(r => r.json()).then(d => {
     '<strong>All performance statistics on this page are computed over confirmed signals only</strong> (n=' + d.stats.totalConfirmed + ' of ' + d.stats.totalEarly + ' Early signals), shown from both entries — the Early trigger and the confirmation cross — because the two decision points are graded separately. Never-confirmed signals feed no statistic. ' +
     'Category: <strong>Quality</strong> = admitted as Profitable or FCF-positive; <strong>Junk</strong> = admitted via the $1B+ growth path (neither profitable nor FCF-positive). ' +
     'The <strong>REVENUE ↑ / REVENUE ↓</strong> badge shows point-in-time TTM revenue growth at the signal date (SEC filings available by then): green when revenue was still growing, red when it was shrinking, absent when it cannot be established point-in-time. Backfilled tests found revenue growth separates short-horizon (30–60 day) bounce quality — most strongly inside deep-flush names — but is not a 90-day separator, so it is shown as information, not used as an admission gate. ' +
-    'The <strong>TIER A / C / B</strong> badges rank Quality signals by point-in-time technicals at the trigger, measured in an October 2026 study of the confirmed cohort: <strong>Tier A</strong> = closed below the 200-week average (deep washout; 72% finished positive since trigger vs 60% for all confirmed, mean +13%), <strong>Tier C</strong> = Tier A plus RSI bullish divergence or ≥1.5× volume expansion (76%, mean +20%), <strong>Tier B</strong> = Tier A plus RSI bullish divergence (84%, mean +24%). Tiers prioritize investigation only — they are not an admission gate, and Junk signals earn no tier (below-200-week Junk finished 41% positive, mean −1.5%). ' +
+    'The <strong>WASHOUT / CAPITULATION / EXHAUSTION</strong> badges rank Quality signals by the bottom evidence present at the trigger, measured in an October 2026 study of the confirmed cohort — each name adds one more kind of evidence: <strong>WASHOUT</strong> = closed below the 200-week average, a long-cycle washout (72% finished positive since trigger vs 60% for all confirmed, mean +13%); <strong>CAPITULATION</strong> = the washout plus a seller climax, RSI divergence or ≥1.5× volume expansion (76%, mean +20%); <strong>EXHAUSTION</strong> = the washout plus RSI bullish divergence specifically — price made a lower low but momentum refused to follow (84%, mean +24%). The badges prioritize investigation only — they are not an admission gate, and Junk signals earn none (below-200-week Junk finished 41% positive, mean −1.5%). ' +
     'Universe is US exchange-listed stocks only (NASDAQ / NYSE / NYSE American / NYSE Arca / Cboe) — no OTC. ' +
     'Survivorship caveat: the universe is built from current listings, so companies delisted before the backfill do not appear. ' +
     'The +30/+60/+90-day columns count only signals whose full horizon had elapsed by ' + d.asOf + '; younger signals show —. ' +
