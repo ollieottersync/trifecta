@@ -324,7 +324,10 @@ function renderCurrent() {
   curSigs.forEach(r => { const k = isoDay(mondayOf(r.d)); (weeks[k] = weeks[k] || []).push(r); });
   Object.keys(weeks).sort().reverse().forEach(k => {
     const md = parseD(k);
-    html += '<div class="group-h"><h3>Week of ' + MON3[md.getMonth()] + ' ' + md.getDate() + '</h3><span class="cnt">' + weeks[k].length + ' signals</span></div>' + currentTable(weeks[k]);
+    const wopen = WEEK_OPEN.has(k);
+    html += '<div class="group-h" style="cursor:pointer" onclick="toggleWeek(\'' + k + '\')"><h3>Week of ' + MON3[md.getMonth()] + ' ' + md.getDate() + '</h3><span class="cnt">' + weeks[k].length + ' signals</span><span id="wkchev-' + k + '" class="about-chev' + (wopen ? ' open' : '') + '">▸</span></div>' +
+      '<div id="wk-' + k + '" style="display:' + (wopen ? '' : 'none') + '">' + currentTable(weeks[k]) + '</div>' +
+      '<div id="wkhint-' + k + '" class="tap-hint" style="display:' + (wopen ? 'none' : '') + '">Tap to expand</div>';
   });
   const months = {};
   sigs.filter(r => r.d.slice(0,7) !== curMonth).forEach(r => { const k = r.d.slice(0,7); (months[k] = months[k] || []).push(r); });
@@ -489,6 +492,20 @@ function toggleAwait() {
   const hint = document.getElementById('await-hint');
   if (hint) hint.style.display = AWAIT_OPEN ? 'none' : '';
   try { localStorage.setItem('trifectaAwaitOpen', AWAIT_OPEN ? '1' : '0'); } catch (e) {}
+}
+let WEEK_OPEN = new Set();
+try { WEEK_OPEN = new Set(JSON.parse(localStorage.getItem('trifectaWeeksOpen') || '[]')); } catch (e) {}
+function toggleWeek(k) {
+  const body = document.getElementById('wk-' + k);
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? '' : 'none';
+  const ch = document.getElementById('wkchev-' + k);
+  if (ch) ch.classList.toggle('open', open);
+  const hint = document.getElementById('wkhint-' + k);
+  if (hint) hint.style.display = open ? 'none' : '';
+  if (open) WEEK_OPEN.add(k); else WEEK_OPEN.delete(k);
+  try { localStorage.setItem('trifectaWeeksOpen', JSON.stringify([...WEEK_OPEN])); } catch (e) {}
 }
 try { if (localStorage.getItem('trifectaAboutOpen') === '1') setAbout(true); } catch (e) {}
 
