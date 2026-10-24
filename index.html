@@ -131,6 +131,10 @@
     finished positive 72% of the time (mean +13%), Capitulation 76% (+20%), Exhaustion 84% (+24%), against 60% (+5%) for
     confirmed signals overall. The badges rank what deserves a closer look first; they never admit or exclude a stock,
     and Junk names earn none.</p>
+    <p style="margin-bottom:0">The <strong>View</strong> toggle defaults to the <strong>Working list</strong>: badged signals, anything confirmed in the
+    last 45 days, and anything currently up 10% or more since its trigger — the names that deserve desk space today.
+    Switch to <strong>All</strong> for the complete record. Every statistic on this page is always computed over the full
+    confirmed record, whichever view is showing.</p>
     </div>
   </div>
 
@@ -153,6 +157,11 @@
       <span class="seg seg-chart">
         <button data-range="daily" onclick="setChartRange('daily')" title="Ticker links open the chart on Yahoo Finance">Daily</button>
         <button data-range="1y" onclick="setChartRange('1y')" title="Ticker links open the chart on Finviz — trailing-year view">1 Year</button>
+      </span>
+      <span class="lbl">View:</span>
+      <span class="seg seg-view">
+        <button data-view="working" class="active" onclick="setView('working')" title="Badged signals, anything confirmed in the last 45 days, and anything up 10%+ since its trigger">Working list</button>
+        <button data-view="all" onclick="setView('all')" title="Every signal in the record">All</button>
       </span>
       <span class="shown" id="curCount"></span>
       <span style="flex:1"></span>
@@ -178,6 +187,11 @@
       <span class="seg seg-chart">
         <button data-range="daily" onclick="setChartRange('daily')" title="Ticker links open the chart on Yahoo Finance">Daily</button>
         <button data-range="1y" onclick="setChartRange('1y')" title="Ticker links open the chart on Finviz — trailing-year view">1 Year</button>
+      </span>
+      <span class="lbl">View:</span>
+      <span class="seg seg-view">
+        <button data-view="working" class="active" onclick="setView('working')" title="Badged signals, anything confirmed in the last 45 days, and anything up 10%+ since its trigger">Working list</button>
+        <button data-view="all" onclick="setView('all')" title="Every signal in the record">All</button>
       </span>
     </div>
     <div id="record-stats"></div>
@@ -216,6 +230,24 @@ const PATHS = ['Profitable','FCF-positive','Growth $1B+'];
 let DATA = null;
 let MODE = 'all'; // 'all' = Quality + Junk, 'quality' = Quality only
 let CHART_RANGE = 'daily'; // 'daily' = Yahoo Finance chart links, '1y' = Finviz trailing-year chart links
+let VIEW = 'working'; // 'working' = badged / confirmed in last 45d / up >=10% since trigger; 'all' = full record
+try { if (localStorage.getItem('trifectaView') === 'all') VIEW = 'all'; } catch (e) {}
+function inWorking(r) {
+  if (r.tier) return true;
+  const ref = r.cd ? parseD(r.cd) : parseD(r.d);
+  if (Math.round((parseD(DATA.asOf) - ref) / 86400000) <= 45) return true;
+  return r.st !== null && r.st !== undefined && r.st >= 10;
+}
+function setView(v) {
+  VIEW = v;
+  try { localStorage.setItem('trifectaView', v); } catch (e) {}
+  applyViewSeg();
+  renderCurrent();
+  renderRecordTable();
+}
+function applyViewSeg() {
+  document.querySelectorAll('.seg-view button').forEach(b => b.classList.toggle('active', b.getAttribute('data-view') === VIEW));
+}
 try { if (localStorage.getItem('trifectaChartRange') === '1y') CHART_RANGE = '1y'; } catch (e) {}
 function chartUrl(sym) {
   return CHART_RANGE === '1y' ? 'https://finviz.com/quote.ashx?t=' + sym
@@ -374,8 +406,9 @@ function currentTable(rows) {
 
 function renderCurrent() {
   // Closed-out signals (never confirmed within 15 days) leave Current entirely.
-  const sigs = sortSignals(visibleSignals().filter(r => !r.cl));
-  document.getElementById('curCount').textContent = 'Showing ' + sigs.length + ' of ' + DATA.stats.totalEarly + ' signals' + (MODE === 'quality' ? ' — junk category hidden' : '');
+  const sigs0 = visibleSignals().filter(r => !r.cl);
+  const sigs = sortSignals(VIEW === 'working' ? sigs0.filter(inWorking) : sigs0);
+  document.getElementById('curCount').textContent = 'Showing ' + sigs.length + ' of ' + DATA.stats.totalEarly + ' signals' + (MODE === 'quality' ? ' — junk category hidden' : '') + (VIEW === 'working' ? ' — working list' : '');
   let html = '';
   const asofD = parseD(DATA.asOf); asofD.setDate(asofD.getDate() - 15);
   const awaiting = sigs.filter(r => r.d >= isoDay(asofD) && !r.cd);
@@ -405,6 +438,7 @@ function renderCurrent() {
   });
   document.getElementById('current-body').innerHTML = html;
   applyChartRange();
+  applyViewSeg();
 }
 
 function statCard(title, rowsHtml) {
@@ -494,10 +528,13 @@ function monthGroups(rows) {
 }
 function renderRecordTable() {
   const vis = visibleSignals();
-  // Main table: CONFIRMED signals only. Dead list: closed-out never-confirmed.
-  document.getElementById('record-table').innerHTML = monthGroups(sortSignals(vis.filter(r => r.cd)));
+  // Main table: CONFIRMED signals only (working-list view applies here too). Dead list: closed-out never-confirmed.
+  const confRows = vis.filter(r => r.cd && (VIEW === 'all' || inWorking(r)));
+  window._confInView = confRows.length;
+  document.getElementById('record-table').innerHTML = monthGroups(sortSignals(confRows));
   document.getElementById('dead-table').innerHTML = monthGroups(sortSignals(vis.filter(r => r.cl)));
   applyChartRange();
+  applyViewSeg();
   applyFilter();
 }
 function applyFilter() {
@@ -519,7 +556,7 @@ function applyFilter() {
   };
   scan('#record-table', false);
   scan('#dead-table', true);
-  const confInView = visibleSignals().filter(r => r.cd).length;
+  const confInView = (window._confInView !== undefined ? window._confInView : visibleSignals().filter(r => r.cd).length);
   document.getElementById('shownCount').textContent = 'Showing ' + shown + ' of ' + confInView + ' confirmed signals in view (' + DATA.stats.totalConfirmed + ' total confirmed)';
   const dc = document.getElementById('deadCount');
   if (dc) dc.textContent = shownDead + ' signals';
@@ -528,7 +565,7 @@ function applyFilter() {
 function renderAll() { renderHeadline(); renderCurrent(); renderRecordStats(); renderRecordTable(); }
 function setMode(m) {
   MODE = m;
-  document.querySelectorAll('.seg button').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === m));
+  document.querySelectorAll('.seg button[data-mode]').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === m));
   renderAll();
 }
 function showTab(which) {
