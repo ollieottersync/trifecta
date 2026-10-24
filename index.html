@@ -111,7 +111,7 @@
 <div class="wrap">
   <h1><span class="tri">▲</span> TRIFECTA</h1>
   <div class="sub">Three oversold signals. One trigger. A public track record.</div>
-  <div class="dl-row"><a class="dl-btn" href="report.pdf" download>⬇ Download PDF report</a><span class="dl-note">Full graded record, badge ladder, and every open signal — data as of <span id="pdf-asof">the latest close</span>; refreshed weekdays after the close.</span></div>
+  <div class="dl-row"><a class="dl-btn" href="report.pdf" download>⬇ Download PDF report</a><span class="dl-note">Data as of <span id="pdf-asof">the latest close</span>; refreshed weekdays after the close.</span></div>
 
   <div class="card" id="about-card">
     <h2 class="about-h" style="margin:0" onclick="toggleAbout()">About the Trifecta Screener <span id="about-chev" class="about-chev">▸</span></h2>
@@ -364,12 +364,21 @@ function tierBadge(r) {
   };
   return '<div><span class="tierchip ' + r.tier.toLowerCase() + '" title="' + tips[r.tier] + '">' + labels[r.tier] + '</span>' + w + '</div>';
 }
+function faLine(r) {
+  // Fundamentals period-end date (2026-10-24): shown on every row so the
+  // freshness behind the label (or its absence) is visible at a glance.
+  if (!r.fa) return '';
+  const mon = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return '<div class="pathlbl">Fundamentals: ' + mon[+r.fa.slice(5, 7) - 1] + ' ' + r.fa.slice(0, 4) + '</div>';
+}
 function catCell(r) {
   // Unlabeled signals (cat === null, 2026-10-24 omit-the-badge rule): the
   // Quality/Junk chip is simply absent; the admission path line remains.
+  // A signal is also unlabeled when its fundamentals were more than 120
+  // days old at the trigger (staleness gate, 2026-10-24).
   const chip = (r.cat === 'Quality' || r.cat === 'Junk')
     ? '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span>' : '';
-  return chip + '<div class="pathlbl">' + esc(r.p) + '</div>' + revBadge(r) + tierBadge(r);
+  return chip + '<div class="pathlbl">' + esc(r.p) + '</div>' + faLine(r) + revBadge(r) + tierBadge(r);
 }
 function currentRow(r) {
   return '<tr><td><span class="tk">' + tkLink(r) + '</span> <span class="nm">' + esc(r.name || '') + '</span>' + trigLine(r) + '</td>' +
