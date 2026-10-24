@@ -116,26 +116,23 @@
   <div class="card" id="about-card">
     <h2 class="about-h" style="margin:0" onclick="toggleAbout()">About the Trifecta Screener <span id="about-chev" class="about-chev">▸</span></h2>
     <div id="about-body" style="display:none">
-    <p>An <strong>Early (bottoming)</strong> signal fires when, within a 7-day cluster:
-    <strong>RSI(14)</strong> is at or below <strong>35</strong>, the <strong>fast stochastic (5,3)</strong> crosses up
-    out of oversold (%K and %D both under 20), and the <strong>MACD (12,26,9)</strong> histogram bottoms and rises
-    two straight days. It becomes <strong>Confirmed</strong> if the MACD line crosses above its signal line within
-    <strong>15 calendar days</strong>, with RSI still under 55.</p>
-    <p style="margin-bottom:0">Every admitted stock carries a category. <strong>Quality</strong> names were profitable
-    <em>or</em> free-cash-flow positive at the signal date (market cap ≥ <strong>$500M</strong>). <strong>Junk</strong> names were
-    neither — admitted only on size (market cap ≥ <strong>$1B</strong>). US <strong>exchange-listed</strong> stocks only (no OTC);
-    price ≥ $5 and 20-day average volume ≥ 500k shares. Market cap and fundamentals are judged on the SEC filings
-    available <strong>at the signal date</strong> — never on today's numbers. Use the category toggle on either tab to
-    see what the junk filter is worth: every figure on the page recomputes for the visible set.</p>
-    <p style="margin-bottom:0">Quality signals can also earn a <strong>bottom-evidence badge</strong>, graded at the trigger.
-    Each badge adds one more kind of evidence that the selling is done: <strong>WASHOUT</strong> — the stock closed below its
-    <strong>200-week average</strong>, a long-cycle washout in a fundamentally sound name. <strong>CAPITULATION</strong> — the washout,
-    plus a seller climax: <strong>RSI divergence</strong> or a <strong>≥1.5× surge in trading volume</strong>. <strong>★ EXHAUSTION</strong> —
-    the washout, plus <strong>RSI bullish divergence</strong> specifically: price ground out a lower low while momentum refused to
-    follow, the measurable signature of sellers running out. In the 2026 backfill the ladder separated cleanly — Washout names
-    finished positive 72% of the time (mean +13%), Capitulation 76% (+20%), Exhaustion 84% (+24%), against 60% (+5%) for
-    confirmed signals overall. The badges rank what deserves a closer look first; they never admit or exclude a stock,
-    and Junk names earn none.</p>
+    <p>An <strong>Early (bottoming)</strong> signal fires when three oversold indicators — <strong>RSI</strong>, the
+    <strong>fast stochastic</strong>, and <strong>MACD</strong> — bottom together in a tight cluster. It becomes
+    <strong>Confirmed</strong> when the MACD confirms the turn within a short window, while momentum is still depressed.
+    The exact thresholds, windows, and filters are the Trifecta methodology — reserved for members (membership opens
+    with the launch of trifectasignals.com). What is public is the complete record those rules produced, below.</p>
+    <p style="margin-bottom:0">Every admitted stock carries a category. <strong>Quality</strong> names passed the
+    screener's point-in-time fundamental health checks. <strong>Junk</strong> names did not — they are admitted only on a
+    stricter size basis. US <strong>exchange-listed</strong> stocks only (no OTC), with minimum price and liquidity
+    requirements. Market cap and fundamentals are judged on the SEC filings available <strong>at the signal date</strong> —
+    never on today's numbers. Use the category toggle on either tab to see what the category filter is worth: every
+    figure on the page recomputes for the visible set.</p>
+    <p style="margin-bottom:0">Quality signals can also earn a <strong>bottom-evidence badge</strong>, graded at the trigger:
+    <strong>WASHOUT</strong>, <strong>CAPITULATION</strong>, and <strong>★ EXHAUSTION</strong> mark progressively stronger evidence that the
+    selling is done. In the 2026 backfill the ladder separated cleanly — Washout names finished positive 72% of the
+    time (mean +13%), Capitulation 76% (+20%), Exhaustion 84% (+24%), against 60% (+5%) for confirmed signals overall.
+    The badges rank what deserves a closer look first; they never admit or exclude a stock, and Junk names earn none.
+    The evidence tests behind each badge are part of the member methodology.</p>
     <p style="margin-bottom:0">The <strong>View</strong> toggle defaults to the <strong>Shortlist</strong>: badged signals, anything confirmed in the
     last 45 days, and anything currently up 10% or more since its trigger — the names that deserve desk space today.
     Switch to <strong>Full Record</strong> to see every signal in the record. Every statistic on this page is always computed over the full
@@ -209,7 +206,7 @@
     <div id="record-table"></div>
     <div id="dead-wrap" style="margin-top:34px">
       <div class="group-h"><h3>Early signals that never confirmed — excluded from stats</h3><span class="cnt" id="deadCount"></span></div>
-      <p class="nm" style="margin:2px 0 10px">These Early signals never got their MACD confirmation within the 15-day window and were closed out — their live figures are frozen at closeout. They are kept for reference only and feed no statistic on this page.</p>
+      <p class="nm" style="margin:2px 0 10px">These Early signals never got their MACD confirmation within their confirmation window and were closed out — their live figures are frozen at closeout. They are kept for reference only and feed no statistic on this page.</p>
       <div id="dead-table"></div>
     </div>
   </div>
@@ -355,12 +352,12 @@ function revBadge(r) {
 }
 function tierBadge(r) {
   if (!r.tier) return '';
-  const w = (r.w2 === null || r.w2 === undefined) ? '' : '<span class="revsub">' + (r.w2 > 0 ? '+' : '') + r.w2.toFixed(0) + '% vs 200wk</span>';
+  const w = '';
   const labels = { B: '★ EXHAUSTION', C: 'CAPITULATION', A: 'WASHOUT' };
   const tips = {
-    B: 'EXHAUSTION (top tier): Quality, closed below its 200-week average at the trigger, with RSI bullish divergence — price made a lower low but momentum refused to follow. The selling is measurably running out. 2026 backfill: 84% positive since trigger, mean +24%.',
-    C: 'CAPITULATION: Quality, closed below its 200-week average at the trigger, with a seller climax — RSI divergence or >=1.5x volume expansion. 2026 backfill: 76% positive since trigger, mean +20%.',
-    A: 'WASHOUT: Quality, closed below its 200-week average at the trigger — a long-cycle washout in a fundamentally sound name. 2026 backfill: 72% positive since trigger, mean +13%.'
+    B: 'EXHAUSTION (top tier): the strongest bottom-evidence badge a Quality signal can carry at its trigger. 2026 backfill: 84% positive since trigger, mean +24%.',
+    C: 'CAPITULATION: a Quality signal carrying strong bottom evidence at its trigger. 2026 backfill: 76% positive since trigger, mean +20%.',
+    A: 'WASHOUT: a Quality signal carrying bottom evidence at its trigger. 2026 backfill: 72% positive since trigger, mean +13%.'
   };
   return '<div><span class="tierchip ' + r.tier.toLowerCase() + '" title="' + tips[r.tier] + '">' + labels[r.tier] + '</span>' + w + '</div>';
 }
@@ -374,8 +371,8 @@ function faLine(r) {
 function catCell(r) {
   // Unlabeled signals (cat === null, 2026-10-24 omit-the-badge rule): the
   // Quality/Junk chip is simply absent; the admission path line remains.
-  // A signal is also unlabeled when its fundamentals were more than 120
-  // days old at the trigger (staleness gate, 2026-10-24).
+  // A signal is also unlabeled when its fundamentals were too old at the
+  // trigger to carry a current-health label (staleness gate, 2026-10-24).
   const chip = (r.cat === 'Quality' || r.cat === 'Junk')
     ? '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span>' : '';
   return chip + '<div class="pathlbl">' + esc(r.p) + '</div>' + faLine(r) + revBadge(r) + tierBadge(r);
@@ -391,7 +388,7 @@ function currentTable(rows) {
 }
 
 function renderCurrent() {
-  // Closed-out signals (never confirmed within 15 days) leave Current entirely.
+  // Closed-out signals (never confirmed within their window) leave Current entirely.
   const sigs0 = visibleSignals().filter(r => !r.cl);
   const sigs = sortSignals(VIEW === 'working' ? sigs0.filter(inWorking) : sigs0);
   document.getElementById('curCount').textContent = 'Showing ' + sigs.length + ' of ' + DATA.stats.totalEarly + ' signals' + (MODE === 'quality' ? ' — junk category hidden' : '') + (VIEW === 'working' ? ' — shortlist' : '');
@@ -401,7 +398,7 @@ function renderCurrent() {
   if (awaiting.length) {
     html += '<div class="card await"><h2 class="about-h" style="margin:0" onclick="toggleAwait()">⏳ Awaiting confirmation (' + awaiting.length + ') <span id="await-chev" class="about-chev' + (AWAIT_OPEN ? ' open' : '') + '">▸</span></h2>' +
       '<div id="await-body" style="display:' + (AWAIT_OPEN ? '' : 'none') + '">' +
-      '<p style="margin-top:10px">Early signals from the last 15 days still inside their MACD confirmation window.</p>' +
+      '<p style="margin-top:10px">Recent Early signals still inside their confirmation window.</p>' +
       currentTable(awaiting) + '</div>' +
       '<div id="await-hint" class="tap-hint" style="display:' + (AWAIT_OPEN ? 'none' : '') + '">Tap to expand</div></div>';
   }
@@ -608,19 +605,18 @@ fetch('data.json').then(r => r.json()).then(d => {
   const pa = document.getElementById('pdf-asof'); if (pa) pa.textContent = d.asOf;
   renderAll();
   document.getElementById('methodology').innerHTML =
-    'Methodology: backfill of ' + d.windowStart + ' to ' + d.windowEnd + '; returns since trigger measured to the ' + d.priceAsOf +
-    ' close, split/dividend adjusted. Fundamentals and market cap are point-in-time: SEC EDGAR facts as originally filed on or before each signal date ' +
-    '(TTM = prior fiscal year + current YTD − prior-year same-period YTD); shares outstanding from the closest filing on or before the signal date. ' +
+    'About this record: backfill of ' + d.windowStart + ' to ' + d.windowEnd + '; returns since trigger measured to the ' + d.priceAsOf +
+    ' close, split/dividend adjusted. Fundamentals and market cap are point-in-time: SEC EDGAR facts as originally filed on or before each signal date; shares outstanding from the closest filing on or before the signal date. ' +
     'The signal log is append-only — a stock admitted at its trigger date is never removed, even if it later falls below the size floors. ' +
-    'An Early signal that never confirms within its 15-day window is <strong>closed out</strong>: it leaves the Current tab, its live figures freeze at closeout, and it moves to the separate never-confirmed list on the Track Record tab, labelled CLOSED — never confirmed. ' +
+    'An Early signal that never confirms within its confirmation window is <strong>closed out</strong>: it leaves the Current tab, its live figures freeze at closeout, and it moves to the separate never-confirmed list on the Track Record tab, labelled CLOSED — never confirmed. ' +
     '<strong>All performance statistics on this page are computed over confirmed signals only</strong> (n=' + d.stats.totalConfirmed + ' of ' + d.stats.totalEarly + ' Early signals), shown from both entries — the Early trigger and the confirmation cross — because the two decision points are graded separately. Never-confirmed signals feed no statistic. ' +
-    'Category: <strong>Quality</strong> = admitted as Profitable or FCF-positive; <strong>Junk</strong> = admitted via the $1B+ growth path (neither profitable nor FCF-positive). ' +
-    'The <strong>REVENUE ↑ / REVENUE ↓</strong> badge shows point-in-time TTM revenue growth at the signal date (SEC filings available by then): green when revenue was still growing, red when it was shrinking, absent when it cannot be established point-in-time. Backfilled tests found revenue growth separates short-horizon (30–60 day) bounce quality — most strongly inside deep-flush names — but is not a 90-day separator, so it is shown as information, not used as an admission gate. ' +
-    'The <strong>WASHOUT / CAPITULATION / EXHAUSTION</strong> badges rank Quality signals by the bottom evidence present at the trigger, measured in an October 2026 study of the confirmed cohort — each name adds one more kind of evidence: <strong>WASHOUT</strong> = closed below the 200-week average, a long-cycle washout (72% finished positive since trigger vs 60% for all confirmed, mean +13%); <strong>CAPITULATION</strong> = the washout plus a seller climax, RSI divergence or ≥1.5× volume expansion (76%, mean +20%); <strong>EXHAUSTION</strong> = the washout plus RSI bullish divergence specifically — price made a lower low but momentum refused to follow (84%, mean +24%). The badges prioritize investigation only — they are not an admission gate, and Junk signals earn none (below-200-week Junk finished 41% positive, mean −1.5%). ' +
+    'Category: <strong>Quality</strong> = passed the screener\'s point-in-time fundamental health checks at the signal date; <strong>Junk</strong> = did not, and was admitted on a stricter size basis. The exact category tests are part of the member methodology. ' +
+    'The <strong>REVENUE ↑ / REVENUE ↓</strong> badge shows point-in-time TTM revenue growth at the signal date (SEC filings available by then): green when revenue was still growing, red when it was shrinking, absent when it cannot be established point-in-time. It is shown as information, not used as an admission gate. ' +
+    'The <strong>WASHOUT / CAPITULATION / EXHAUSTION</strong> badges rank Quality signals by the strength of the bottom evidence present at the trigger, measured in an October 2026 study of the confirmed cohort: <strong>WASHOUT</strong> (72% finished positive since trigger vs 60% for all confirmed, mean +13%); <strong>CAPITULATION</strong> (76%, mean +20%); <strong>EXHAUSTION</strong> (84%, mean +24%). The badges prioritize investigation only — they are not an admission gate, and Junk signals earn none. The evidence tests behind each badge are part of the member methodology. ' +
     'Universe is US exchange-listed stocks only (NASDAQ / NYSE / NYSE American / NYSE Arca / Cboe) — no OTC. ' +
     'Survivorship caveat: the universe is built from current listings, so companies delisted before the backfill do not appear. ' +
     'The +30/+60/+90-day columns count only signals whose full horizon had elapsed by ' + d.asOf + '; younger signals show —. ' +
-    'This site is an educational screening tool, not investment advice.';
+    'The full methodology — trigger thresholds, confirmation rules, category tests, and badge evidence tests — is reserved for members. This site is an educational screening tool, not investment advice.';
 }).catch(e => {
   document.getElementById('current-body').innerHTML = '<div class="loading">Could not load data.json.</div>';
 });
