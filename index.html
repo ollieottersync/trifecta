@@ -136,9 +136,9 @@
     finished positive 72% of the time (mean +13%), Capitulation 76% (+20%), Exhaustion 84% (+24%), against 60% (+5%) for
     confirmed signals overall. The badges rank what deserves a closer look first; they never admit or exclude a stock,
     and Junk names earn none.</p>
-    <p style="margin-bottom:0">The <strong>View</strong> toggle defaults to the <strong>Working list</strong>: badged signals, anything confirmed in the
+    <p style="margin-bottom:0">The <strong>View</strong> toggle defaults to the <strong>Shortlist</strong>: badged signals, anything confirmed in the
     last 45 days, and anything currently up 10% or more since its trigger — the names that deserve desk space today.
-    Switch to <strong>All</strong> for the complete record. Every statistic on this page is always computed over the full
+    Switch to <strong>Full Record</strong> to see every signal in the record. Every statistic on this page is always computed over the full
     confirmed record, whichever view is showing.</p>
     </div>
   </div>
@@ -160,8 +160,8 @@
       </span>
       <span class="lbl">View:</span>
       <span class="seg seg-view">
-        <button data-view="working" class="active" onclick="setView('working')" title="Badged signals, anything confirmed in the last 45 days, and anything up 10%+ since its trigger">Working list</button>
-        <button data-view="all" onclick="setView('all')" title="Every signal in the record">All</button>
+        <button data-view="working" class="active" onclick="setView('working')" title="Badged signals, anything confirmed in the last 45 days, and anything up 10%+ since its trigger">Shortlist</button>
+        <button data-view="all" onclick="setView('all')" title="Every signal in the record">Full Record</button>
       </span>
       <span class="shown" id="curCount"></span>
       <span style="flex:1"></span>
@@ -185,8 +185,8 @@
       </span>
       <span class="lbl">View:</span>
       <span class="seg seg-view">
-        <button data-view="working" class="active" onclick="setView('working')" title="Badged signals, anything confirmed in the last 45 days, and anything up 10%+ since its trigger">Working list</button>
-        <button data-view="all" onclick="setView('all')" title="Every signal in the record">All</button>
+        <button data-view="working" class="active" onclick="setView('working')" title="Badged signals, anything confirmed in the last 45 days, and anything up 10%+ since its trigger">Shortlist</button>
+        <button data-view="all" onclick="setView('all')" title="Every signal in the record">Full Record</button>
       </span>
     </div>
     <div id="record-stats"></div>
@@ -381,7 +381,7 @@ function renderCurrent() {
   // Closed-out signals (never confirmed within 15 days) leave Current entirely.
   const sigs0 = visibleSignals().filter(r => !r.cl);
   const sigs = sortSignals(VIEW === 'working' ? sigs0.filter(inWorking) : sigs0);
-  document.getElementById('curCount').textContent = 'Showing ' + sigs.length + ' of ' + DATA.stats.totalEarly + ' signals' + (MODE === 'quality' ? ' — junk category hidden' : '') + (VIEW === 'working' ? ' — working list' : '');
+  document.getElementById('curCount').textContent = 'Showing ' + sigs.length + ' of ' + DATA.stats.totalEarly + ' signals' + (MODE === 'quality' ? ' — junk category hidden' : '') + (VIEW === 'working' ? ' — shortlist' : '');
   let html = '';
   const asofD = parseD(DATA.asOf); asofD.setDate(asofD.getDate() - 15);
   const awaiting = sigs.filter(r => r.d >= isoDay(asofD) && !r.cd);
