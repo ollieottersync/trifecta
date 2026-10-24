@@ -365,7 +365,11 @@ function tierBadge(r) {
   return '<div><span class="tierchip ' + r.tier.toLowerCase() + '" title="' + tips[r.tier] + '">' + labels[r.tier] + '</span>' + w + '</div>';
 }
 function catCell(r) {
-  return '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span><div class="pathlbl">' + esc(r.p) + '</div>' + revBadge(r) + tierBadge(r);
+  // Unlabeled signals (cat === null, 2026-10-24 omit-the-badge rule): the
+  // Quality/Junk chip is simply absent; the admission path line remains.
+  const chip = (r.cat === 'Quality' || r.cat === 'Junk')
+    ? '<span class="qchip ' + (r.cat === 'Quality' ? 'quality' : 'junk') + '">' + r.cat.toUpperCase() + '</span>' : '';
+  return chip + '<div class="pathlbl">' + esc(r.p) + '</div>' + revBadge(r) + tierBadge(r);
 }
 function currentRow(r) {
   return '<tr><td><span class="tk">' + tkLink(r) + '</span> <span class="nm">' + esc(r.name || '') + '</span>' + trigLine(r) + '</td>' +
